@@ -1,0 +1,53 @@
+{
+  "Camera1_LocationA": {
+    "clips": 341,
+    "footage_min": 116.6,
+    "clips_with_dogs": 286,
+    "pct_clips_with_dogs": 83.9,
+    "recording_span": "2025-01-06 15:11 to 2025-01-08 15:51",
+    "calendar_days": 3,
+    "visits": 117,
+    "visits_per_day": 39.0,
+    "median_visit_s": 32.9,
+    "max_dogs_at_once": 4,
+    "mean_dogs_per_visit": 1.59,
+    "dog_minutes": 90.7,
+    "pct_dog_time_moving": 11.0,
+    "interaction_minutes": 8.04,
+    "night_visits": 14
+  },
+  "Camera3_LocationC": {
+    "clips": 73,
+    "footage_min": 26.0,
+    "clips_with_dogs": 57,
+    "pct_clips_with_dogs": 78.1,
+    "recording_span": "2025-01-06 15:41 to 2025-01-08 16:02",
+    "calendar_days": 3,
+    "visits": 31,
+    "visits_per_day": 10.3,
+    "median_visit_s": 28.5,
+    "max_dogs_at_once": 7,
+    "mean_dogs_per_visit": 1.9,
+    "dog_minutes": 26.7,
+    "pct_dog_time_moving": 13.6,
+    "interaction_minutes": 2.45,
+    "night_visits": 4
+  },
+  "Camera4_LocationD": {
+    "clips": 11,
+    "footage_min": 4.0,
+    "clips_with_dogs": 8,
+    "pct_clips_with_dogs": 72.7,
+    "recording_span": "2025-01-06 16:00 to 2025-01-07 15:38",
+    "calendar_days": 2,
+    "visits": 6,
+    "visits_per_day": 3.0,
+    "median_visit_s": 18.5,
+    "max_dogs_at_once": 3,
+    "mean_dogs_per_visit": 1.5,
+    "dog_minutes": 1.4,
+    "pct_dog_time_moving": 30.0,
+    "interaction_minutes": 0.02,
+    "night_visits": 0
+  }
+}
