@@ -1,0 +1,274 @@
+<title>Dog Box Labeler</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one-screen tool — status bar, image stage, thumb-reach toolbar at the bottom. */
+:root{
+  --bg:#f3f4f1; --panel:#ffffff; --fg:#1d2320; --muted:#5f6a64; --line:#d6dbd6;
+  --accent:#1f7a5a; --accent-fg:#ffffff; --box:#ffd400; --hard:#ff6b3d; --sel:#3fb5ff; --stage:#111513;
+  --done:#1f7a5a; --skip:#a06a00;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121614; --panel:#1b211e; --fg:#e7ece8; --muted:#9aa59f; --line:#2e3632;
+  --accent:#3fae86; --accent-fg:#08140f; --stage:#050706; --done:#3fae86; --skip:#e0a43a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121614; --panel:#1b211e; --fg:#e7ece8; --muted:#9aa59f; --line:#2e3632;
+  --accent:#3fae86; --accent-fg:#08140f; --stage:#050706; --done:#3fae86; --skip:#e0a43a; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:10px;padding-block:10px;box-sizing:border-box;overflow:hidden}
+button{font:inherit;color:inherit}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.top h1{font-size:17px;font-weight:600;margin:0}
+.prog{flex:1 1 160px;min-width:0;display:flex;align-items:center;gap:10px}
+.bar{flex:1;height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);width:0}
+.count{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;color:var(--muted);white-space:nowrap}
+.meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}
+.chip{padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.chip.night{background:#222;color:#ddd;border-color:#444}
+.chip.st-done{border-color:var(--done);color:var(--done)} .chip.st-skip{border-color:var(--skip);color:var(--skip)}
+.fid{font-family:var(--mono);font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.stage{flex:1;min-height:0;background:var(--stage);border-radius:8px;overflow:auto;position:relative;-webkit-overflow-scrolling:touch}
+.canvas{position:relative;margin:auto;line-height:0;touch-action:none}
+.stage.pan .canvas{touch-action:auto}
+.canvas img{display:block;width:100%;height:auto;max-width:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.box{position:absolute;border:2px solid var(--box);box-sizing:border-box;pointer-events:none}
+.box.hard{border-style:dashed;border-color:var(--hard)}
+.box.sel{border-color:var(--sel);box-shadow:0 0 0 2px rgba(63,181,255,.35)}
+.box b{position:absolute;left:-2px;top:-20px;font:500 11px/18px var(--mono);padding:0 5px;background:var(--box);color:#111;white-space:nowrap}
+.box.hard b{background:var(--hard)} .box.sel b{background:var(--sel)}
+.msg{position:absolute;inset:auto 12px 12px auto;font-size:12px;color:#eee;background:rgba(0,0,0,.55);padding:4px 8px;border-radius:6px;line-height:1.4;pointer-events:none}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-bottom:env(safe-area-inset-bottom,0px)}
+.tools .grp{display:flex;gap:8px;flex-wrap:wrap}
+.tools .sp{flex:1}
+.btn{min-height:44px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:var(--panel);cursor:pointer}
+.btn:focus-visible{outline:2px solid var(--sel);outline-offset:2px}
+.btn[disabled]{opacity:.45;cursor:default}
+.btn.on{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);font-weight:600}
+.btn.warn{color:var(--hard);border-color:var(--hard)}
+details{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:14px}
+details summary{cursor:pointer;font-weight:500}
+details ul{margin:8px 0 2px;padding-left:20px;line-height:1.5;max-width:70ch}
+.status{font-size:13px;color:var(--muted);min-height:18px}
+.status.err{color:var(--hard)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="top">
+  <h1>Dog Box Labeler</h1>
+  <div class="prog"><div class="bar"><i id="barfill"></i></div><span class="count" id="count">loading frames…</span></div>
+</div>
+<div class="meta">
+  <span class="chip" id="cam">–</span><span class="chip" id="dn">–</span><span class="chip" id="st">not labelled</span>
+  <span class="fid" id="fid"></span>
+</div>
+<details id="help">
+  <summary>How to label (tap to open)</summary>
+  <ul>
+    <li>Drag a tight box around <b>every dog</b> you can see, puppies included. Include the visible part of a partly hidden dog.</li>
+    <li>Mark a box <b>Hard</b> when the dog is mostly hidden (under about a quarter visible) or too small or blurry to be sure. Hard boxes are not counted for or against the model.</li>
+    <li>No dog in the frame? Tap <b>No dogs</b>. Can't tell at all? Tap <b>Skip frame</b>.</li>
+    <li>Tap a box to select it, then <b>Delete</b> or <b>Hard</b>. To fix a box, delete it and draw again.</li>
+    <li>Small dogs far away: tap <b>Zoom</b>, switch to <b>Pan</b> to move around, then back to <b>Draw</b>.</li>
+    <li>Your work saves automatically. You can stop and come back any time.</li>
+  </ul>
+</details>
+<div class="stage" id="stage">
+  <div class="canvas" id="canvas"><img id="img" alt="Frame to label" draggable="false"><div id="boxes"></div></div>
+  <div class="msg" id="hint">Drag to draw a box</div>
+</div>
+<div class="status" id="status"></div>
+<div class="tools">
+  <div class="grp">
+    <button class="btn" id="prev" title="Previous (P)">‹ Prev</button>
+    <button class="btn" id="next" title="Next (N)">Next ›</button>
+    <button class="btn" id="todo" title="Next unlabelled">Next unlabelled</button>
+  </div>
+  <div class="grp">
+    <button class="btn" id="hardBtn" disabled title="Toggle hard (H)">Hard</button>
+    <button class="btn warn" id="delBtn" disabled title="Delete box (Backspace)">Delete</button>
+  </div>
+  <div class="sp"></div>
+  <div class="grp">
+    <button class="btn" id="zoom" title="Zoom (Z)">Zoom 1×</button>
+    <button class="btn on" id="mode">Draw</button>
+  </div>
+  <div class="grp">
+    <button class="btn" id="skip">Skip frame</button>
+    <button class="btn" id="nodog" title="No dogs (0)">No dogs</button>
+    <button class="btn primary" id="done" title="Save and next (Enter)">Done · Next</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  let frames = [], idx = 0, labels = {}, cur = null, sel = -1, zoom = 1, pan = false, db = null, dirty = false, saveTimer = null;
+  const LS = k => { try { return localStorage.getItem(k) } catch (e) { return null } };
+  const LSset = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v) } catch (e) {} };
+
+  function status(t, err) { const s = $('status'); s.textContent = t || ''; s.className = 'status' + (err ? ' err' : ''); }
+
+  function progress() {
+    const n = frames.filter(f => labels[f.frame_id] && labels[f.frame_id].status).length;
+    $('count').textContent = `${n} / ${frames.length} labelled`;
+    $('barfill').style.width = (frames.length ? 100 * n / frames.length : 0) + '%';
+  }
+
+  function load(i) {
+    flush();
+    idx = Math.max(0, Math.min(frames.length - 1, i));
+    const f = frames[idx];
+    const saved = labels[f.frame_id];
+    let draft = null;
+    try { draft = JSON.parse(LS('draft:' + f.frame_id) || 'null') } catch (e) {}
+    cur = JSON.parse(JSON.stringify(draft || saved || { boxes: [], status: '' }));
+    sel = -1; dirty = !!draft;
+    $('img').src = 'img/' + f.frame_id + '.jpg';
+    $('cam').textContent = f.camera.replace('_Location', ' · ');
+    $('dn').textContent = f.night ? 'night (IR)' : 'day';
+    $('dn').className = 'chip' + (f.night ? ' night' : '');
+    $('fid').textContent = `#${idx + 1} · ${f.frame_id}`;
+    $('prev').disabled = idx === 0; $('next').disabled = idx === frames.length - 1;
+    LSset('lastIdx', String(idx));
+    render();
+  }
+
+  function render() {
+    const st = cur.status;
+    $('st').textContent = st === 'done' ? (cur.boxes.length ? `${cur.boxes.length} dog box${cur.boxes.length > 1 ? 'es' : ''}` : 'no dogs') : st === 'skip' ? 'skipped' : (cur.boxes.length ? 'unsaved' : 'not labelled');
+    $('st').className = 'chip' + (st === 'done' ? ' st-done' : st === 'skip' ? ' st-skip' : '');
+    const wrap = $('boxes'); wrap.textContent = '';
+    cur.boxes.forEach((b, k) => {
+      const d = document.createElement('div');
+      d.className = 'box' + (b.hard ? ' hard' : '') + (k === sel ? ' sel' : '');
+      Object.assign(d.style, { left: b.x1 * 100 + '%', top: b.y1 * 100 + '%', width: (b.x2 - b.x1) * 100 + '%', height: (b.y2 - b.y1) * 100 + '%' });
+      const t = document.createElement('b'); t.textContent = (k + 1) + (b.hard ? ' hard' : ''); d.appendChild(t);
+      wrap.appendChild(d);
+    });
+    $('hardBtn').disabled = $('delBtn').disabled = sel < 0;
+    $('hardBtn').classList.toggle('on', sel >= 0 && !!cur.boxes[sel]?.hard);
+    progress();
+  }
+
+  function touched() {
+    dirty = true;
+    LSset('draft:' + frames[idx].frame_id, JSON.stringify(cur));
+    clearTimeout(saveTimer); saveTimer = setTimeout(flush, 1200);
+  }
+
+  async function flush() {
+    clearTimeout(saveTimer);
+    if (!dirty || !frames.length) return;
+    const f = frames[idx], body = { boxes: cur.boxes.map(b => ({ x1: +b.x1.toFixed(5), y1: +b.y1.toFixed(5), x2: +b.x2.toFixed(5), y2: +b.y2.toFixed(5), hard: !!b.hard })), status: cur.status || (cur.boxes.length ? 'done' : ''), updated: new Date().toISOString() };
+    if (!body.status) { dirty = false; LSset('draft:' + f.frame_id, null); return; }
+    dirty = false;
+    labels[f.frame_id] = body; progress();
+    if (!db) { status('Not connected: labels are kept on this iPad only until the page reconnects.', true); dirty = true; return; }
+    try {
+      await db.doc('labels/' + f.frame_id).set(body);
+      LSset('draft:' + f.frame_id, null);
+      status('Saved ' + new Date().toLocaleTimeString());
+    } catch (e) {
+      dirty = true;
+      status(e && e.code === 'invalid_argument' ? 'You can view this page but not save labels.' : 'Could not save. Your box is kept on this iPad; it will retry when you move on.', true);
+    }
+  }
+
+  // ---- drawing ----
+  const canvas = $('canvas');
+  let start = null, ghost = null;
+  function rel(e) { const r = $('img').getBoundingClientRect(); return { x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)), w: r.width, h: r.height }; }
+  canvas.addEventListener('pointerdown', e => {
+    if (pan || !cur) return;
+    e.preventDefault(); canvas.setPointerCapture(e.pointerId);
+    start = rel(e);
+    ghost = document.createElement('div'); ghost.className = 'box'; $('boxes').appendChild(ghost);
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!start) return;
+    const p = rel(e);
+    Object.assign(ghost.style, { left: Math.min(p.x, start.x) * 100 + '%', top: Math.min(p.y, start.y) * 100 + '%', width: Math.abs(p.x - start.x) * 100 + '%', height: Math.abs(p.y - start.y) * 100 + '%' });
+  });
+  function end(e) {
+    if (!start) return;
+    const p = rel(e), s = start; start = null; ghost && ghost.remove(); ghost = null;
+    const wpx = Math.abs(p.x - s.x) * p.w, hpx = Math.abs(p.y - s.y) * p.h;
+    if (wpx < 8 && hpx < 8) {            // a tap: select the smallest box under the finger
+      let best = -1, area = 9;
+      cur.boxes.forEach((b, k) => { if (p.x >= b.x1 && p.x <= b.x2 && p.y >= b.y1 && p.y <= b.y2) { const a = (b.x2 - b.x1) * (b.y2 - b.y1); if (a < area) { area = a; best = k; } } });
+      sel = best; render(); return;
+    }
+    cur.boxes.push({ x1: Math.min(p.x, s.x), y1: Math.min(p.y, s.y), x2: Math.max(p.x, s.x), y2: Math.max(p.y, s.y), hard: false });
+    cur.status = 'done'; sel = cur.boxes.length - 1; touched(); render();
+  }
+  canvas.addEventListener('pointerup', end);
+  canvas.addEventListener('pointercancel', () => { start = null; ghost && ghost.remove(); ghost = null; });
+
+  function setZoom(z) { zoom = z; $('canvas').style.width = (z * 100) + '%'; $('zoom').textContent = 'Zoom ' + z + '×'; fit(); }
+  function fit() {
+    // at 1x fit the whole frame inside the stage (16:9)
+    const st = $('stage').getBoundingClientRect();
+    const w1 = Math.min(st.width, st.height * 16 / 9);
+    $('canvas').style.width = (w1 * zoom) + 'px';
+  }
+  window.addEventListener('resize', fit);
+
+  $('zoom').onclick = () => setZoom(zoom === 1 ? 2 : zoom === 2 ? 3 : 1);
+  $('mode').onclick = () => { pan = !pan; $('mode').textContent = pan ? 'Pan' : 'Draw'; $('mode').classList.toggle('on', !pan); $('stage').classList.toggle('pan', pan); $('hint').textContent = pan ? 'Pan mode: drag to move around' : 'Drag to draw a box'; };
+  $('prev').onclick = () => load(idx - 1);
+  $('next').onclick = () => load(idx + 1);
+  $('todo').onclick = () => {
+    flush();
+    for (let k = 1; k <= frames.length; k++) { const j = (idx + k) % frames.length; if (!(labels[frames[j].frame_id] || {}).status) return load(j); }
+    status('Every frame is labelled. Thank you!');
+  };
+  $('delBtn').onclick = () => { if (sel < 0) return; cur.boxes.splice(sel, 1); sel = -1; if (!cur.boxes.length && cur.status === 'done') cur.status = 'done'; touched(); render(); };
+  $('hardBtn').onclick = () => { if (sel < 0) return; cur.boxes[sel].hard = !cur.boxes[sel].hard; touched(); render(); };
+  $('nodog').onclick = () => { cur.boxes = []; cur.status = 'done'; dirty = true; flush().then(() => $('todo').onclick()); };
+  $('skip').onclick = () => { cur.status = 'skip'; dirty = true; flush().then(() => $('todo').onclick()); };
+  $('done').onclick = () => { if (!cur.status) cur.status = 'done'; dirty = true; flush().then(() => idx < frames.length - 1 ? load(idx + 1) : $('todo').onclick()); };
+  document.addEventListener('keydown', e => {
+    if (e.target.closest && e.target.closest('summary')) return;
+    const k = e.key.toLowerCase();
+    if (k === 'n' || k === 'arrowright') $('next').click();
+    else if (k === 'p' || k === 'arrowleft') $('prev').click();
+    else if (k === 'backspace' || k === 'delete') { e.preventDefault(); $('delBtn').click(); }
+    else if (k === 'h') $('hardBtn').click();
+    else if (k === '0') $('nodog').click();
+    else if (k === 'enter') $('done').click();
+    else if (k === 'z') $('zoom').click();
+  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
+
+  // ---- data ----
+  fetch('frames.json').then(r => r.json()).then(list => {
+    frames = list;
+    const last = parseInt(LS('lastIdx') || '0', 10);
+    setZoom(1); load(isNaN(last) ? 0 : last);
+  }).catch(() => status('Could not load the frame list. Reload the page to try again.', true));
+
+  if (window.claude && window.claude.use) {
+    const timer = setTimeout(() => status('Still connecting to saved labels…'), 10000);
+    window.claude.use('db').then(d => {
+      if (!d) { clearTimeout(timer); status('Saving is not available here. Open this page signed in to claude.ai to save labels.', true); return; }
+      db = d;
+      d.collection('labels').onSnapshot(snap => {
+        if (!snap.metadata.fromCache) { clearTimeout(timer); if ($('status').textContent.startsWith('Still')) status(''); }
+        snap.docs.forEach(doc => { labels[doc.id] = doc.data(); });
+        if (frames.length && !dirty) { const f = frames[idx]; if (labels[f.frame_id] && !LS('draft:' + f.frame_id)) { cur = JSON.parse(JSON.stringify(labels[f.frame_id])); } }
+        if (frames.length) render();
+        if (dirty) flush();
+      }, err => { clearTimeout(timer); status('Lost the connection to saved labels. Reload the page to reconnect.', true); });
+    });
+  } else {
+    status('Saving is not available here. Open this page on claude.ai to save labels.', true);
+  }
+})();
+</script>
