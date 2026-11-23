@@ -1,0 +1,9 @@
+{
+  "train_clips": 59,
+  "test_clips": 25,
+  "digit_acc": 0.9946823799942512,
+  "frame_timestamp_acc": 0.9336016096579477,
+  "clip_start_abs_err_median_s": 0.133333,
+  "clip_start_abs_err_max_s": 0.133333,
+  "clips_within_1_5s": 25
+}

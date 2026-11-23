@@ -1,3 +1,7 @@
 extras/
 # raw footage and derived data (downloaded from release data-v1)
 data/
+.venv/
+models/
+__pycache__/
+*.pyc
