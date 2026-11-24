@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Stray Dog Detection — Project Brief</title>
+<style>
+/* Print layout: A4 portrait, one reading column, figures full width. */
+:root{
+  --ink:#1c2420; --muted:#58645d; --line:#d5ddd8; --soft:#eef3f0; --accent:#1f7a5a; --warn:#b4541f; --paper:#ffffff;
+  --sans:"Inter","DejaVu Sans",sans-serif; --mono:"DejaVu Sans Mono",monospace;
+}
+@page{size:A4;margin:16mm 16mm 18mm}
+html{background:var(--paper)}
+body{margin:0;font-family:var(--sans);color:var(--ink);font-size:10.4pt;line-height:1.5}
+h1{font-size:24pt;line-height:1.15;margin:0 0 4pt;letter-spacing:-.01em}
+h2{font-size:14.5pt;margin:20pt 0 6pt;padding-top:8pt;border-top:1.2pt solid var(--ink);break-after:avoid}
+h2 .n{color:var(--accent);margin-right:6pt}
+h3{font-size:11pt;margin:12pt 0 3pt;break-after:avoid}
+p{margin:0 0 7pt;max-width:none}
+ul,ol{margin:0 0 8pt;padding-left:16pt} li{margin:0 0 2.5pt}
+.lead{font-size:11.5pt;color:var(--muted);margin-bottom:12pt}
+.meta{display:flex;flex-wrap:wrap;gap:4pt 14pt;font-size:9pt;color:var(--muted);margin-bottom:14pt}
+.meta b{color:var(--ink);font-weight:600}
+.cover{border-bottom:1.2pt solid var(--ink);padding-bottom:10pt}
+.box{background:var(--soft);border-left:3pt solid var(--accent);padding:8pt 11pt;margin:8pt 0 10pt;break-inside:avoid}
+.box.warn{border-left-color:var(--warn)}
+.box p:last-child,.box ul:last-child{margin-bottom:0}
+.kicker{font-size:8pt;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:2pt}
+.box.warn .kicker{color:var(--warn)}
+table{border-collapse:collapse;width:100%;font-size:9.2pt;margin:4pt 0 10pt;break-inside:avoid;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:3.5pt 6pt;border-bottom:.6pt solid var(--line);vertical-align:top}
+th{font-weight:600;border-bottom:1pt solid var(--ink)}
+td.r,th.r{text-align:right}
+figure{margin:6pt 0 12pt;break-inside:avoid}
+figure img{width:100%;display:block;border-radius:2pt}
+figcaption{font-size:8.6pt;color:var(--muted);margin-top:4pt;line-height:1.4}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8pt}
+.two figure{margin:0}
+code,.mono{font-family:var(--mono);font-size:8.6pt}
+.pb{break-before:page}
+.steps{counter-reset:s;list-style:none;padding:0}
+.steps li{counter-increment:s;position:relative;padding-left:20pt;margin-bottom:5pt}
+.steps li::before{content:counter(s);position:absolute;left:0;top:0;width:14pt;height:14pt;border-radius:50%;background:var(--accent);color:#fff;font-size:8pt;font-weight:700;text-align:center;line-height:14pt}
+.status{display:inline-block;font-size:7.8pt;font-weight:700;padding:1pt 6pt;border-radius:8pt;white-space:nowrap}
+.done{background:#dcefe6;color:#17624a} .wait{background:#fbe8d8;color:#8f3f12} .todo{background:#e6e9e7;color:#47524c}
+dl{margin:0;display:grid;grid-template-columns:30mm 1fr;gap:4pt 10pt;font-size:9.6pt}
+dt{font-weight:600} dd{margin:0}
+.diagram{margin:6pt 0 10pt;break-inside:avoid}
+.small{font-size:8.8pt;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="kicker">CMKL course assignment · project brief</div>
+  <h1>Finding stray dogs in raw camera footage from Chiang Mai</h1>
+  <p class="lead">What the project is, what the data turned out to be, what has been built and found so far, how it will be evaluated, and what is left. Written to be read offline.</p>
+  <div class="meta"><span>Repository <b>Epp-ppE/stray-dog-detection</b> (branch <b>main</b>)</span><span>Status as of <b>24 Nov 2026</b></span><span>Footage <b>6–8 Jan 2025</b>, 3 cameras</span></div>
+</div>
+
+<h2><span class="n">1</span>The assignment in one page</h2>
+<p>Stray dogs in Thai communities raise public-health (rabies), road-safety and welfare problems. Vaccination, sterilisation and community care all need basic facts: <b>how many dogs, where, when, and how they behave</b>. CMKL students placed cameras at community feeding spots in Chiang Mai to collect that information. The footage is raw: <b>no labels, no annotations</b>.</p>
+<div class="box">
+  <div class="kicker">The task</div>
+  <p>Design and build a complete pipeline that <b>detects dogs and locates them</b> in the footage, then turn the detections into useful information (visits, counts, activity).</p>
+</div>
+<h3>What has to be handed in</h3>
+<table>
+  <tr><th>Deliverable</th><th>What it must contain</th><th>Status</th></tr>
+  <tr><td>Source code</td><td>Repository with environment setup, dependencies and instructions to reproduce every result</td><td><span class="status done">mostly built</span></td></tr>
+  <tr><td>Technical report: pipeline</td><td>Every step and <i>why</i> it was chosen (preprocessing, model, thresholds, post-processing)</td><td><span class="status todo">to write</span></td></tr>
+  <tr><td>Report: results</td><td>Numbers plus pictures of successes <b>and</b> failures</td><td><span class="status wait">needs labels</span></td></tr>
+  <tr><td>Report: limitations</td><td>Lighting, occlusion, false positives and negatives</td><td><span class="status todo">to write (examples found)</span></td></tr>
+  <tr><td>Report: evaluation method</td><td>Metrics, validation strategy, baseline comparison</td><td><span class="status done">designed and coded</span></td></tr>
+  <tr><td>Dog recognition</td><td>Design for telling individual dogs apart across clips (code optional)</td><td><span class="status todo">to write</span></td></tr>
+</table>
+
+<h2><span class="n">2</span>The data</h2>
+<p>The footage is stored in the repository's GitHub release <span class="mono">data-v1</span> as three zip files (2.4 GB). Every video is a short clip recorded when the camera sensed motion. All cameras are the same Xiaomi model.</p>
+<table>
+  <tr><th>Camera</th><th>Scene</th><th class="r">Files</th><th class="r">Unique</th><th class="r">Footage</th><th>Days</th><th class="r">Night clips</th></tr>
+  <tr><td>Camera1 (Location A)</td><td>Fenced feeding spot, buckets and food mats</td><td class="r">341</td><td class="r">341</td><td class="r">116.6 min</td><td>6–8 Jan</td><td class="r">58</td></tr>
+  <tr><td>Camera3 (Location C)</td><td>Roadside water trough at a forest edge</td><td class="r">74</td><td class="r">73</td><td class="r">26.0 min</td><td>6–8 Jan</td><td class="r">7</td></tr>
+  <tr><td>Camera4 (Location D)</td><td>Bench beside a building, behind plants</td><td class="r">32</td><td class="r">11</td><td class="r">4.0 min</td><td>6–7 Jan</td><td class="r">0</td></tr>
+  <tr><th>Total</th><th></th><th class="r">447</th><th class="r">425</th><th class="r">2.44 h</th><th></th><th class="r">65</th></tr>
+</table>
+<p>Every clip is 2560×1440 pixels, 15 frames per second, H.265 (HEVC) video with sound, 3 to 30 seconds long. "Night" clips are the camera's infrared mode: black-and-white, with bright glare near the lens.</p>
+
+<figure><img src="img/contact_camera3.jpg" alt="Nine sample frames from Camera3: a roadside trough with dogs by day and in infrared at night"><figcaption>Camera3 (Location C). Day frames and three infrared night frames. One clip shows a hand covering the lens, a typical source of false alarms.</figcaption></figure>
+<div class="two">
+  <figure><img src="img/contact_camera1.jpg" alt="Sample frames from Camera1: a fenced feeding area with puppies"><figcaption>Camera1 (Location A): many puppies, chain-link fence in front.</figcaption></figure>
+  <figure><img src="img/contact_camera4.jpg" alt="Sample frames from Camera4: a bench area, dogs partly hidden by plants, one person"><figcaption>Camera4 (Location D): dogs often half hidden; a person with a motorbike appears.</figcaption></figure>
+</div>
+
+<h3>Two problems hidden in the raw files</h3>
+<div class="box warn">
+  <div class="kicker">Problem 1 · duplicate files</div>
+  <p>22 of the 447 files are exact byte-for-byte copies (found by comparing a fingerprint of every file's contents). Camera4 has 21 of them: names ending in <span class="mono">(1)</span> or <span class="mono">(2)</span>, the usual sign of downloading the same file several times. Camera3 has one re-shared copy. If they were not removed, the same dog visits would be counted two or three times. <b>Fix:</b> the pipeline keeps one copy of each (425 unique clips) and never deletes raw files.</p>
+</div>
+<div class="box warn">
+  <div class="kicker">Problem 2 · Camera1's filenames give the wrong time</div>
+  <p>Camera3 and Camera4 filenames are timestamps (milliseconds since 1970) that match the clock burned into the video. Camera1's names, like <span class="mono">VIDEO_20250108_161610468</span>, all say 8 January 16:16 to 18:24, but the clock in the picture shows dates from 6 to 8 January, including the middle of the night. The names are most likely the time the clips were <b>exported from the phone app</b>, not recorded. Any "time of day" statistic for Camera1 built on the filenames would be wrong.</p>
+</div>
+
+<h3>How the real time was recovered</h3>
+<p>The obvious tool, Tesseract text recognition, read only 2 of 20 test clips: the clock is white text with a thin dark outline, and on a bright sky the white disappears.</p>
+<figure><img src="img/clock_variants.png" alt="Four cleaned-up versions of the clock strip; the digits are readable to a person but noisy"><figcaption>The clock strip after four kinds of clean-up. A person can read <span class="mono">2025/01/06 15:48:15</span>, but background clutter defeats general text recognition.</figcaption></figure>
+<p>Because the font, size and position never change, each of the 14 digit positions can be cut out and recognised on its own with a small classifier (k-nearest-neighbours on HOG shape features). The training labels came for free: Camera3/4 filenames give the exact true time of every frame. Tested on 25 clips it never saw:</p>
+<table>
+  <tr><th>Measure (held-out clips)</th><th class="r">Result</th></tr>
+  <tr><td>Single digits read correctly</td><td class="r">99.5%</td></tr>
+  <tr><td>Whole timestamp correct in a single frame</td><td class="r">93.4%</td></tr>
+  <tr><td>Clip start time (median over all frames of the clip), error</td><td class="r">≤ 0.13 s on all 25 clips</td></tr>
+</table>
+<p>Applied to Camera1, every clip got a start time on which at least 80% of its frames agree. One spot check: a clip whose middle frame shows <span class="mono">15:01:24</span> gets a computed mid-time of 15:01:23.4. <b>This is a good story for the report:</b> the raw data had a hidden error, and it was detected, measured and corrected.</p>
+
+<h2><span class="n">3</span>The pipeline</h2>
+<div class="diagram">
+<svg viewBox="0 0 640 196" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="Inter, DejaVu Sans, sans-serif" role="img" aria-label="Pipeline: raw clips, prepare, sample frames, detect, track, statistics; evaluation and recognition branch off">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1c2420"/></marker></defs>
+  <g font-size="10.5">
+    <rect x="4" y="18" width="92" height="58" rx="4" fill="#eef3f0" stroke="#1c2420"/><text x="50" y="40" text-anchor="middle" font-weight="700">Raw clips</text><text x="50" y="56" text-anchor="middle" fill="#58645d" font-size="9">447 files</text><text x="50" y="68" text-anchor="middle" fill="#58645d" font-size="9">3 cameras</text>
+    <rect x="112" y="18" width="98" height="58" rx="4" fill="#fff" stroke="#1c2420"/><text x="161" y="38" text-anchor="middle" font-weight="700">1 Prepare</text><text x="161" y="54" text-anchor="middle" fill="#58645d" font-size="9">remove duplicates</text><text x="161" y="66" text-anchor="middle" fill="#58645d" font-size="9">read real clock time</text>
+    <rect x="226" y="18" width="98" height="58" rx="4" fill="#fff" stroke="#1c2420"/><text x="275" y="38" text-anchor="middle" font-weight="700">2 Sample</text><text x="275" y="54" text-anchor="middle" fill="#58645d" font-size="9">3 frames per second</text><text x="275" y="66" text-anchor="middle" fill="#58645d" font-size="9">shrink to 1280×720</text>
+    <rect x="340" y="18" width="98" height="58" rx="4" fill="#fff" stroke="#1f7a5a" stroke-width="1.6"/><text x="389" y="38" text-anchor="middle" font-weight="700">3 Detect</text><text x="389" y="54" text-anchor="middle" fill="#58645d" font-size="9">YOLO11 (COCO)</text><text x="389" y="66" text-anchor="middle" fill="#58645d" font-size="9">"dog" boxes, on CPU</text>
+    <rect x="454" y="18" width="84" height="58" rx="4" fill="#fff" stroke="#1c2420"/><text x="496" y="38" text-anchor="middle" font-weight="700">4 Track</text><text x="496" y="54" text-anchor="middle" fill="#58645d" font-size="9">ByteTrack links</text><text x="496" y="66" text-anchor="middle" fill="#58645d" font-size="9">boxes into dogs</text>
+    <rect x="554" y="18" width="82" height="58" rx="4" fill="#eef3f0" stroke="#1c2420"/><text x="595" y="38" text-anchor="middle" font-weight="700">5 Statistics</text><text x="595" y="54" text-anchor="middle" fill="#58645d" font-size="9">visits, counts,</text><text x="595" y="66" text-anchor="middle" fill="#58645d" font-size="9">activity by hour</text>
+  </g>
+  <g stroke="#1c2420" stroke-width="1.2" fill="none" marker-end="url(#a)">
+    <path d="M96 47 H110"/><path d="M210 47 H224"/><path d="M324 47 H338"/><path d="M438 47 H452"/><path d="M538 47 H552"/>
+    <path d="M389 76 V120 H330"/><path d="M496 76 V150 H548"/>
+  </g>
+  <g font-size="10.5">
+    <rect x="150" y="104" width="178" height="58" rx="4" fill="#fff" stroke="#b4541f" stroke-dasharray="4 3"/><text x="239" y="124" text-anchor="middle" font-weight="700">6 Evaluate</text><text x="239" y="140" text-anchor="middle" fill="#58645d" font-size="9">180 hand-labelled frames</text><text x="239" y="152" text-anchor="middle" fill="#58645d" font-size="9">precision, recall, mAP@0.5</text>
+    <rect x="550" y="124" width="86" height="58" rx="4" fill="#fff" stroke="#b4541f" stroke-dasharray="4 3"/><text x="593" y="144" text-anchor="middle" font-weight="700">7 Recognise</text><text x="593" y="160" text-anchor="middle" fill="#58645d" font-size="9">same dog across</text><text x="593" y="172" text-anchor="middle" fill="#58645d" font-size="9">clips (design)</text>
+  </g>
+</svg>
+</div>
+<h3>Each step and why</h3>
+<ol class="steps">
+  <li><b>Prepare.</b> Find duplicates by file fingerprint; give every clip its real start time (filename for Camera3/4, clock reader for Camera1). <i>Why:</i> without this, visits are double-counted and Camera1's times are wrong.</li>
+  <li><b>Sample frames.</b> Analyse 3 frames per second, shrunk from 2560×1440 to 1280×720. <i>Why:</i> there is no GPU. At 15 fps the full run would take about 5× longer, and neighbouring frames are nearly identical. 3 fps is still enough to follow a walking dog.</li>
+  <li><b>Detect.</b> A YOLO11 model pretrained on the COCO dataset, which already contains a "dog" class. <i>Why:</i> there are no labels to train on, so a strong off-the-shelf detector is the honest baseline. All detections down to 5% confidence are stored, so thresholds can be tuned later without re-running the model.</li>
+  <li><b>Track.</b> ByteTrack joins the boxes of one dog across frames into a <i>track</i>. A track counts as a dog only if it lasts at least 1 second and is confident at least once. <i>Why:</i> it removes one-frame flickers, the most common false alarm, and lets us measure how long a dog stays and how it moves.</li>
+  <li><b>Statistics.</b> Visits, dogs per visit, dog-minutes by hour, moving versus resting, and dogs close together (interactions), per camera.</li>
+</ol>
+<h3>Speed on this computer (4 CPU cores)</h3>
+<table>
+  <tr><th>Model</th><th class="r">640 px input</th><th class="r">960 px input</th></tr>
+  <tr><td>YOLO11n (nano, smallest)</td><td class="r">41 ms / frame</td><td class="r">85 ms</td></tr>
+  <tr><td>YOLO11s (small, <b>used for the full run</b>)</td><td class="r">83 ms</td><td class="r">204 ms</td></tr>
+  <tr><td>YOLO11m (medium)</td><td class="r">226 ms</td><td class="r">492 ms</td></tr>
+</table>
+<p class="small">Full run with YOLO11s at 640 px: 26,325 frames in 47 minutes. A larger model or input size only becomes the default if the evaluation shows it is clearly better.</p>
+
+<h2 class="pb"><span class="n">4</span>First results (before evaluation)</h2>
+<p>Out of 425 clips, the detector and tracker found <b>758 confirmed dog tracks in 351 clips</b>. These numbers are not yet checked against human labels. Section 5 explains how they will be.</p>
+<div class="two">
+  <figure><img src="img/tracked_camera3.jpg" alt="Seven dogs at Camera3's trough, each with a yellow tracking box"><figcaption>Success: Camera3 on 6 Jan, 15:44. Seven dogs at once, all real, including a small one far away on the right.</figcaption></figure>
+  <figure><img src="img/night_cam3.jpg" alt="Two dogs in black-and-white infrared footage, both boxed"><figcaption>Success at night: both dogs found in infrared, but with low confidence (0.32 and 0.44), below a typical 0.5 cut-off.</figcaption></figure>
+</div>
+<table>
+  <tr><th>Per camera</th><th class="r">Camera1 (A)</th><th class="r">Camera3 (C)</th><th class="r">Camera4 (D)</th></tr>
+  <tr><td>Clips with at least one dog</td><td class="r">84%</td><td class="r">78%</td><td class="r">73%</td></tr>
+  <tr><td>Visits (clips with dogs, gaps up to 2 min merged)</td><td class="r">117</td><td class="r">31</td><td class="r">6</td></tr>
+  <tr><td>Visits per day</td><td class="r">39</td><td class="r">10</td><td class="r">3</td></tr>
+  <tr><td>Typical (median) visit length</td><td class="r">33 s</td><td class="r">29 s</td><td class="r">19 s</td></tr>
+  <tr><td>Most dogs on screen at once</td><td class="r">4</td><td class="r">7</td><td class="r">3</td></tr>
+  <tr><td>Dog-minutes (sum over dogs of time on screen)</td><td class="r">90.7</td><td class="r">26.7</td><td class="r">1.4</td></tr>
+  <tr><td>Share of dog time spent moving</td><td class="r">11%</td><td class="r">14%</td><td class="r">30%</td></tr>
+  <tr><td>Night visits</td><td class="r">14</td><td class="r">4</td><td class="r">0</td></tr>
+</table>
+<figure><img src="img/activity_by_hour.png" alt="Bar chart of footage minutes and dog-minutes per hour for each camera"><figcaption>Grey: minutes of footage recorded in each hour. Green: dog-minutes detected. Activity is concentrated between about 06:00 and 18:00, mostly around feeding times. Camera3 at 15:00 has more dog-minutes than footage because several dogs were on screen together. Camera4's empty grey bars at 13:00–14:00 are missed dogs (see below).</figcaption></figure>
+<figure><img src="img/visit_timeline.png" alt="Timeline of recorded clips and dog visits for each camera over 6 to 8 January"><figcaption>Every recorded clip (grey) and every dog visit (green, larger = more dogs) over the three days.</figcaption></figure>
+
+<h3>Failure cases already found</h3>
+<div class="two">
+  <figure><img src="img/miss_cam4.jpg" alt="A brown dog standing in clear view at Camera4 with no box"><figcaption><b>Missed dog.</b> Camera4, 7 Jan 13:13: a dog in plain view gets no confirmed track. The detector's best guess in this clip was 0.51 but never held for a full second. Plants and the black lens housing frame the scene.</figcaption></figure>
+  <figure><img src="img/puppy_as_cat.jpg" alt="A black puppy boxed in red and labelled cat 0.92"><figcaption><b>Wrong class.</b> A black puppy is called "cat" with 92% confidence and gets no dog box. The run produced 8,103 "cat" boxes, many of them likely puppies. The evaluation tests whether counting "cat" as dog helps.</figcaption></figure>
+</div>
+<figure style="max-width:62%"><img src="img/tracked_camera1.jpg" alt="Camera1: three black puppies and an adult dog behind the fence, one box covering two puppies"><figcaption><b>Merged dogs.</b> Camera1: three black puppies huddled together plus an adult behind the fence. One box partly covers two puppies, so close groups can be under-counted.</figcaption></figure>
+<p>Other failure sources to discuss in the report: the infrared glare ring at night, the chain-link fence in front of Camera1, dogs lying down (unusual shape for the model), dogs cut off at the frame edge, a hand on the lens, and a person at Camera4.</p>
+
+<h2><span class="n">5</span>How the system will be evaluated</h2>
+<p>There are no labels, so a small labelled test set has to be made by hand. This is <b>your labelling task</b>.</p>
+<h3>Which frames</h3>
+<ul>
+  <li><b>180 frames from 115 different clips</b>, chosen at random by the computer <i>before</i> looking at any detections, so the test is not biased towards what the model finds easy.</li>
+  <li>Balanced across cameras and day/night: Camera1 50 day + 20 night, Camera3 45 day + 15 night, Camera4 50 day.</li>
+  <li>At most a few frames per clip, at least 3 seconds apart, because neighbouring frames are near-copies.</li>
+  <li>Split <b>by clip</b> into a <b>dev</b> half (87 frames, used to choose the confidence threshold) and a <b>test</b> half (93 frames, used only for the reported numbers). Choosing the threshold on the test frames would make the results look better than they are.</li>
+</ul>
+<h3>What will be measured</h3>
+<dl>
+  <dt>IoU</dt><dd>Overlap between a predicted box and a hand-drawn box (0 = none, 1 = identical). A prediction counts as correct when IoU ≥ 0.5.</dd>
+  <dt>Precision</dt><dd>Of the boxes the model drew, the share that were real dogs. Low precision means false alarms.</dd>
+  <dt>Recall</dt><dd>Of the real dogs, the share the model found. Low recall means missed dogs.</dd>
+  <dt>F1</dt><dd>One number balancing precision and recall. It is used to pick the best threshold on the dev half.</dd>
+  <dt>AP / mAP@0.5</dt><dd>Average precision over all thresholds: the standard single score for a detector. With one class ("dog"), mAP equals AP.</dd>
+  <dt>95% interval</dt><dd>Each test score gets a range from resampling the test frames 1,000 times (bootstrap). With 93 frames the uncertainty is real, and the report should show it.</dd>
+  <dt>"Hard" boxes</dt><dd>Dogs you mark as mostly hidden or too small to be sure are ignored: finding one is not rewarded, and missing one is not punished.</dd>
+</dl>
+<h3>What will be compared (at least two models, as required)</h3>
+<table>
+  <tr><th>Setup</th><th>Question it answers</th></tr>
+  <tr><td>YOLO11n / s / m at 640 px</td><td>Does a bigger model find more dogs, and is it worth 3–5× the time?</td></tr>
+  <tr><td>YOLO11s / m at 960 px</td><td>Do larger inputs help with small, far-away dogs (Camera3)?</td></tr>
+  <tr><td>YOLO11s + other animals as dog</td><td>Does counting "cat", "sheep", "bear" and similar classes as dog recover the puppies called cats, or just add false alarms?</td></tr>
+  <tr><td>YOLO11s + tracking filter</td><td>Does keeping only boxes that persist for a second trade a little recall for much better precision?</td></tr>
+</table>
+<p>Results are also broken down <b>by camera</b> and <b>day versus night</b>, which feeds the limitations section directly. Predictions for all setups have already been computed and the scoring code has been tested. It only needs your labels.</p>
+
+<h2><span class="n">6</span>Dog recognition (design, to be written)</h2>
+<p>Detection says <i>"a dog is here"</i>. Recognition says <i>"this is Dog #12, also seen yesterday at Camera3"</i>. It is what turns counts into a population estimate and per-dog visit histories.</p>
+<ul>
+  <li><b>Training data:</b> each track is already a set of crops of one dog, which gives free "same dog" examples. A person then joins tracks across clips into named dogs.</li>
+  <li><b>Features:</b> a pretrained image model turns each crop into a numeric fingerprint (embedding). It is fine-tuned so that the same dog's crops land close together. New tracks are matched to a gallery of known dogs.</li>
+  <li><b>Extra clues:</b> time and place. A dog seen 10 seconds earlier on the same camera is almost certainly the same dog.</li>
+  <li><b>Challenges visible in this footage:</b> look-alike black puppies, colour lost at night, puppies growing, the fence, dogs eating head-down, different viewpoints per camera.</li>
+  <li><b>Evaluation:</b> hand-match 20–30 dogs; report how often the right dog is the top match (rank-1) and whether the number of distinct dogs comes out right.</li>
+</ul>
+
+<h2><span class="n">7</span>What is done and what is left</h2>
+<table>
+  <tr><th>Item</th><th>Status</th></tr>
+  <tr><td>Data download, duplicate removal, real recording times</td><td><span class="status done">done</span></td></tr>
+  <tr><td>Detection on all 425 clips, tracking, per-camera statistics and charts</td><td><span class="status done">done</span></td></tr>
+  <tr><td>Evaluation frames chosen, labelling page built, predictions for 7 setups, scoring code tested</td><td><span class="status done">done</span></td></tr>
+  <tr><td><b>Labelling the 180 frames (you)</b></td><td><span class="status wait">in progress</span></td></tr>
+  <tr><td>Scoring and choosing the final model and threshold</td><td><span class="status wait">after labels</span></td></tr>
+  <tr><td>Success and failure gallery for the report</td><td><span class="status todo">to do</span></td></tr>
+  <tr><td>Dog recognition design, plus an optional "probably the same dog" demo</td><td><span class="status todo">to do</span></td></tr>
+  <tr><td>README with setup and run instructions</td><td><span class="status todo">to do</span></td></tr>
+  <tr><td>Technical report</td><td><span class="status todo">to do</span></td></tr>
+</table>
+
+<h3>Running it yourself (for later)</h3>
+<p class="mono" style="background:var(--soft);padding:7pt 9pt;line-height:1.7">python -m venv .venv &amp;&amp; . .venv/bin/activate &amp;&amp; pip install -r requirements.txt<br>scripts/download_data.sh<br>cd src<br>python train_clock_reader.py &amp;&amp; python prepare.py<br>python detect.py --model yolo11s --imgsz 640<br>python track.py --det yolo11s_640 &amp;&amp; python stats.py --tracks yolo11s_640<br>python select_eval_frames.py &amp;&amp; python evaluate.py</p>
+
+<h3>Words you may be asked about in the presentation</h3>
+<dl>
+  <dt>COCO</dt><dd>A large public image dataset with 80 object classes, "dog" among them. The detector learned from it, not from this footage.</dd>
+  <dt>YOLO</dt><dd>"You Only Look Once", a fast family of object detectors that output a box, a class and a confidence for each object.</dd>
+  <dt>Confidence</dt><dd>How sure the model is (0 to 1). The threshold decides which boxes are kept.</dd>
+  <dt>ByteTrack</dt><dd>A tracker that links detections across frames by predicted motion and box overlap, using low-confidence boxes to bridge brief misses.</dd>
+  <dt>Infrared (IR)</dt><dd>Night mode: the camera lights the scene with invisible light and records in grey. Colour cues disappear.</dd>
+  <dt>Embedding</dt><dd>A list of numbers summarising how something looks. Similar-looking dogs get similar lists. This is the basis of recognition.</dd>
+  <dt>Dev / test split</dt><dd>Tune on one half, report on the other half, so the reported score is not flattered by the tuning.</dd>
+</dl>
+
+</body>
+</html>
