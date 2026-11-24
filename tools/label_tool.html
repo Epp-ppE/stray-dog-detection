@@ -56,6 +56,13 @@ details{background:var(--panel);border:1px solid var(--line);border-radius:8px;p
 details summary{cursor:pointer;font-weight:500}
 details ul{margin:8px 0 2px;padding-left:20px;line-height:1.5;max-width:70ch}
 .status{font-size:13px;color:var(--muted);min-height:18px}
+.boxlist{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}
+.boxlist .lbl{color:var(--muted)}
+.bchip{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:8px;background:var(--panel);overflow:hidden}
+.bchip button{border:0;background:none;min-height:40px;padding:0 12px;cursor:pointer}
+.bchip .x{border-left:1px solid var(--line);color:var(--hard);font-weight:600;padding:0 14px}
+.bchip.sel{border-color:var(--sel)} .bchip.sel button:first-child{color:var(--sel);font-weight:600}
+.bchip.hard button:first-child{color:var(--hard)}
 .status.err{color:var(--hard)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -74,7 +81,7 @@ details ul{margin:8px 0 2px;padding-left:20px;line-height:1.5;max-width:70ch}
     <li>Drag a tight box around <b>every dog</b> you can see, puppies included. Include the visible part of a partly hidden dog.</li>
     <li>Mark a box <b>Hard</b> when the dog is mostly hidden (under about a quarter visible) or too small or blurry to be sure. Hard boxes are not counted for or against the model.</li>
     <li>No dog in the frame? Tap <b>No dogs</b>. Can't tell at all? Tap <b>Skip frame</b>.</li>
-    <li>Tap a box to select it, then <b>Delete</b> or <b>Hard</b>. To fix a box, delete it and draw again.</li>
+    <li>Every box is listed under the image. Tap <b>✕</b> next to a box to delete it, or tap <b>Box N</b> to select it and then <b>Hard</b>. To fix a box, delete it and draw again.</li>
     <li>Small dogs far away: tap <b>Zoom</b>, switch to <b>Pan</b> to move around, then back to <b>Draw</b>.</li>
     <li>Your work saves automatically. You can stop and come back any time.</li>
   </ul>
@@ -83,6 +90,7 @@ details ul{margin:8px 0 2px;padding-left:20px;line-height:1.5;max-width:70ch}
   <div class="canvas" id="canvas"><img id="img" alt="Frame to label" draggable="false"><div id="boxes"></div></div>
   <div class="msg" id="hint">Drag to draw a box</div>
 </div>
+<div class="boxlist" id="boxlist"></div>
 <div class="status" id="status"></div>
 <div class="tools">
   <div class="grp">
@@ -152,6 +160,18 @@ details ul{margin:8px 0 2px;padding-left:20px;line-height:1.5;max-width:70ch}
       const t = document.createElement('b'); t.textContent = (k + 1) + (b.hard ? ' hard' : ''); d.appendChild(t);
       wrap.appendChild(d);
     });
+    const bl = $('boxlist'); bl.textContent = '';
+    if (cur.boxes.length) {
+      const l = document.createElement('span'); l.className = 'lbl'; l.textContent = 'Boxes:'; bl.appendChild(l);
+      cur.boxes.forEach((b, k) => {
+        const c = document.createElement('span'); c.className = 'bchip' + (k === sel ? ' sel' : '') + (b.hard ? ' hard' : '');
+        const s = document.createElement('button'); s.textContent = 'Box ' + (k + 1) + (b.hard ? ' (hard)' : ''); s.title = 'Select box ' + (k + 1);
+        s.onclick = () => { sel = sel === k ? -1 : k; render(); };
+        const x = document.createElement('button'); x.className = 'x'; x.textContent = '✕'; x.setAttribute('aria-label', 'Delete box ' + (k + 1));
+        x.onclick = () => { cur.boxes.splice(k, 1); sel = -1; touched(); render(); };
+        c.append(s, x); bl.appendChild(c);
+      });
+    }
     $('hardBtn').disabled = $('delBtn').disabled = sel < 0;
     $('hardBtn').classList.toggle('on', sel >= 0 && !!cur.boxes[sel]?.hard);
     progress();
@@ -200,7 +220,7 @@ details ul{margin:8px 0 2px;padding-left:20px;line-height:1.5;max-width:70ch}
     if (!start) return;
     const p = rel(e), s = start; start = null; ghost && ghost.remove(); ghost = null;
     const wpx = Math.abs(p.x - s.x) * p.w, hpx = Math.abs(p.y - s.y) * p.h;
-    if (wpx < 8 && hpx < 8) {            // a tap: select the smallest box under the finger
+    if (wpx < 14 && hpx < 14) {          // a tap: select the smallest box under the finger
       let best = -1, area = 9;
       cur.boxes.forEach((b, k) => { if (p.x >= b.x1 && p.x <= b.x2 && p.y >= b.y1 && p.y <= b.y2) { const a = (b.x2 - b.x1) * (b.y2 - b.y1); if (a < area) { area = a; best = k; } } });
       sel = best; render(); return;
