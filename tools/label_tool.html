@@ -87,7 +87,7 @@ details ul{margin:8px 0 2px;padding-left:20px;line-height:1.5;max-width:70ch}
   </ul>
 </details>
 <div class="stage" id="stage">
-  <div class="canvas" id="canvas"><img id="img" alt="Frame to label" draggable="false"><div id="boxes"></div></div>
+  <div class="canvas" id="canvas"><img id="img" alt="Frame to label" draggable="false"><div id="boxes"></div><div id="ghostLayer"></div></div>
   <div class="msg" id="hint">Drag to draw a box</div>
 </div>
 <div class="boxlist" id="boxlist"></div>
@@ -209,7 +209,7 @@ details ul{margin:8px 0 2px;padding-left:20px;line-height:1.5;max-width:70ch}
     if (pan || !cur) return;
     e.preventDefault(); canvas.setPointerCapture(e.pointerId);
     start = rel(e);
-    ghost = document.createElement('div'); ghost.className = 'box'; $('boxes').appendChild(ghost);
+    ghost = document.createElement('div'); ghost.className = 'box sel'; $('ghostLayer').appendChild(ghost);
   });
   canvas.addEventListener('pointermove', e => {
     if (!start) return;
