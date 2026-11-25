@@ -1,0 +1,485 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Stray dog detection report</title><style>
+@page{size:A4;margin:16mm 16mm 18mm}
+body{font-family:Inter,"DejaVu Sans",sans-serif;color:#1c2420;font-size:10pt;line-height:1.5;margin:0}
+h1{font-size:21pt;line-height:1.2;margin:0 0 4pt}
+h2{font-size:14pt;margin:18pt 0 6pt;padding-top:6pt;border-top:1.2pt solid #1c2420;break-after:avoid}
+h3{font-size:11.5pt;margin:12pt 0 4pt;break-after:avoid}
+p{margin:0 0 7pt} ul,ol{margin:0 0 8pt;padding-left:16pt} li{margin:0 0 3pt}
+img{max-width:100%;max-height:82mm;width:auto;display:block;margin:6pt auto 2pt;break-inside:avoid}
+p:has(> img){break-inside:avoid;margin:6pt 0 0}
+em{color:#4d5852}
+table{border-collapse:collapse;width:100%;font-size:8.6pt;margin:4pt 0 10pt;break-inside:avoid;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:3pt 5pt;border-bottom:.5pt solid #d6ddd8;vertical-align:top}
+th{border-bottom:1pt solid #1c2420}
+code{font-family:"DejaVu Sans Mono",monospace;font-size:8.6pt;background:#f1f4f2;padding:0 2pt;border-radius:2pt}
+pre{background:#f1f4f2;padding:6pt 8pt;font-size:8pt;white-space:pre-wrap}
+hr{border:0;border-top:.6pt solid #d6ddd8;margin:12pt 0}
+</style></head><body><h1>Detecting and locating stray dogs in raw camera footage from Chiang Mai</h1>
+<p><em>Technical report · CMKL course assignment · repository: <code>Epp-ppE/stray-dog-detection</code></em></p>
+<h2>Summary</h2>
+<p>Cameras at three community feeding spots in Chiang Mai recorded 447 motion-triggered clips
+(6–8 January 2025) with no labels. This project builds a CPU-only pipeline that finds and
+locates dogs in that footage, follows each dog through a clip, and turns the result into
+visit and activity statistics per camera. Before any modelling, two hidden problems in the
+data were found and fixed: 22 duplicate files, and wrong timestamps in Camera1's filenames,
+which were recovered from the clock burned into the video. Because no labels existed, 180
+frames were chosen at random and hand-labelled (332 dogs), split by clip into a <strong>dev</strong> half
+for tuning and a <strong>test</strong> half for reporting. Nine detector setups were compared. A
+COCO-pretrained <strong>YOLO11m at 960 px, counting every animal class as "dog"</strong>, reached
+<strong>AP@0.5 = 0.75 [95% CI 0.67–0.83]</strong> and <strong>F1 = 0.78</strong> on the test half, against 0.44 and
+0.54 for the YOLO11s baseline. The largest single gain came from counting every animal
+class as dog, because the pretrained model often calls puppies "cat" and calls dogs in
+night-time infrared "sheep" or "cow". The main remaining failures are small or far-away
+dogs, dark dogs in infrared, dogs behind the chain-link fence, and groups of overlapping
+puppies. A design for recognising individual dogs across clips is given, with a small
+untrained demo.</p>
+<hr />
+<h2>1. Data</h2>
+<table>
+<thead>
+<tr>
+<th>Camera</th>
+<th>Scene</th>
+<th>Files</th>
+<th>Unique clips</th>
+<th>Footage</th>
+<th>Night (infrared) clips</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Camera1 (A)</td>
+<td>Fenced feeding area, bowls, chain-link fence</td>
+<td>341</td>
+<td>341</td>
+<td>116.6 min</td>
+<td>58</td>
+</tr>
+<tr>
+<td>Camera3 (C)</td>
+<td>Water trough by a forest road</td>
+<td>74</td>
+<td>73</td>
+<td>26.0 min</td>
+<td>7</td>
+</tr>
+<tr>
+<td>Camera4 (D)</td>
+<td>Bench beside a building, behind plants</td>
+<td>32</td>
+<td>11</td>
+<td>4.0 min</td>
+<td>0</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td></td>
+<td><strong>447</strong></td>
+<td><strong>425</strong></td>
+<td><strong>2.44 h</strong></td>
+<td><strong>65</strong></td>
+</tr>
+</tbody>
+</table>
+<p>All clips are 2560×1440, 15 fps, H.265 with audio, 3–30 s long (median about 20 s), from
+Xiaomi cameras with a wide-angle lens. Night clips are black-and-white infrared with strong
+glare near the lens.</p>
+<p><img alt="Camera3 sample frames" src="figures/contact_camera3.jpg" />
+<em>Figure 1. Camera3, day and infrared night. Dogs range from close-up to a few dozen pixels on the far road.</em></p>
+<p><strong>Duplicates.</strong> File fingerprints (MD5) showed 22 byte-identical copies. Twenty-one are
+Camera4 files saved two or three times (<code>(1)</code>, <code>(2)</code> suffixes) and one is a re-shared
+Camera3 file. Counting them would double- or triple-count visits. One copy of each is kept.</p>
+<p><strong>Wrong timestamps.</strong> Camera3/4 filenames are Unix-millisecond start times that match the
+on-screen clock. Camera1 filenames (<code>VIDEO_20250108_161610468</code>) all fall between 16:16 and
+18:24 on 8 January, but the burned-in clock shows recordings across 6–8 January,
+including at night: the names are export times. Time-of-day statistics need the real time,
+so it was read from the overlay. General text recognition (Tesseract) read only 2 of 20
+test clips, because the white digits disappear against bright sky (Figure 2). Since the
+font, size and position never change, each of the 14 digit positions is instead cut out
+and classified separately (HOG features, 3-nearest-neighbours). Training labels came free
+from Camera3/4, whose filenames give the true time of every frame. On 25 held-out clips:
+<strong>99.5%</strong> of digits correct, <strong>93.4%</strong> of single-frame timestamps fully correct, and every
+clip start time (median over all frames of the clip) <strong>within 0.13 s</strong>. On every Camera1
+clip at least 80% of the frames agree on the start time.</p>
+<p><img alt="Clock strip variants" src="figures/clock_variants.png" />
+<em>Figure 2. The clock strip after four kinds of image clean-up. A person reads it easily; general text recognition does not.</em></p>
+<h2>2. Pipeline</h2>
+<p><img alt="Pipeline" src="figures/pipeline.png" /></p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Prepare</td>
+<td>Remove duplicates; recover real start times</td>
+<td>Avoid double counting; correct time of day</td>
+</tr>
+<tr>
+<td>2. Sample</td>
+<td>3 frames/s, shrunk to 1280×720 (ffmpeg drops frames before shrinking)</td>
+<td>No GPU. Neighbouring frames at 15 fps are almost identical, and 3 fps still follows a walking dog. 5× less compute</td>
+</tr>
+<tr>
+<td>3. Detect</td>
+<td>COCO-pretrained YOLO11; every COCO animal class counted as dog; class-agnostic NMS (IoU 0.6) removes duplicate boxes on one animal; all boxes ≥ 0.01 stored</td>
+<td>No labels to train on, so a strong pretrained detector is the honest baseline. Storing low-confidence boxes lets thresholds be tuned without re-running the model</td>
+</tr>
+<tr>
+<td>4. Track</td>
+<td>ByteTrack per clip; a track is a confirmed dog only if it lasts long enough and is confident at least once; settings chosen on the dev clips</td>
+<td>Removes one-frame flickers; gives time on screen and movement per dog</td>
+</tr>
+<tr>
+<td>5. Statistics</td>
+<td>Visits, dogs per visit, dog-minutes by hour, moving vs resting, close contact</td>
+<td>The information a vaccination or sterilisation team needs</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Model choice.</strong> YOLO11 comes in several sizes; n, s and m were compared at 640 px input
+and s and m at 960 px. A larger input helps small, far-away dogs (Camera3's road), and a
+larger model helps hard poses and infrared. Speed on the 4-core CPU used here: 41 / 83 /
+226 ms per frame at 640 px (n / s / m), and 204 / 492 ms at 960 px (s / m).</p>
+<p><strong>Counting every animal class as dog.</strong> COCO has no "puppy" class, and its night images
+are colour photos, not infrared. Of the labelled dogs the final model found, 28% had a
+non-dog class as their most confident label (mostly "cat"), and 52% at night. Counting all
+animal classes (cat, dog, horse, sheep, cow, bear) as dog recovers these. The cost is that
+real cats or livestock would also be counted as dogs. No other animals appeared in the 180
+labelled frames, but a deployment near farms would need a check.</p>
+<p><strong>Thresholds.</strong> Every confidence threshold was chosen on the dev half only (best F1). The
+chosen box thresholds are very low (0.01–0.04), because this footage is far from COCO's
+photos and the model's confidence is badly calibrated for it: many correct dog boxes score
+below 0.1. At the common default of 0.25, the final setup keeps 98% precision but recall
+drops from 0.75 to 0.60.</p>
+<p><strong>Statistics definitions.</strong>
+* <em>Dogs in a clip:</em> the most confirmed tracks visible in any one frame. This is a lower bound
+  on distinct dogs that does not grow when the tracker loses and re-finds a dog.
+* <em>Dog-seconds:</em> the number of dogs in each frame, summed and divided by 3 frames per second.
+* <em>Visit:</em> consecutive clips with dogs on one camera, merged when the gap is ≤ 2 minutes
+  (the camera records bursts of short clips).
+* <em>Moving vs resting:</em> box-centre speed in body lengths per second, using box height as a
+  proxy for body length. Above 0.25 counts as moving.
+* <em>Close contact:</em> two dogs whose box centres are closer than their average box width.</p>
+<h2>3. Evaluation methodology</h2>
+<p><strong>Labelled set.</strong> 180 frames from 115 clips were drawn at random <strong>before any model output
+was seen</strong>, stratified by camera and day/night (Camera1 50 day + 20 night, Camera3 45 + 15,
+Camera4 50 day). At most 2–6 frames come from one clip, at least 3 s apart, because
+neighbouring frames are near-copies. The frames are pixel-identical to what the detector
+sees. They were labelled in a purpose-built browser tool with a written guide:
+* one box per dog, covering its visible extent only;
+* a <strong>hard</strong> flag for dogs less than about a quarter visible or too small or unclear to be sure;
+* fixed background objects (a rock that appears in every Camera1 frame) are not dogs.</p>
+<p>The result: 332 dog boxes, 28 hard boxes and 20 frames with no dog. No frames were skipped.</p>
+<p><strong>Split.</strong> Whole clips are assigned to <strong>dev</strong> (87 frames) or <strong>test</strong> (93 frames), so no
+clip appears in both. Thresholds, the tracker settings and the choice of final setup use
+dev only. Headline numbers are test numbers.</p>
+<p><strong>Matching and metrics.</strong> A predicted box is a true positive if its IoU with a not-yet-matched
+dog box is ≥ 0.5 (greedy, most confident first). Predictions on hard boxes are ignored, and
+missed hard boxes are not counted as misses. Reported: AP@0.5 (all-point interpolated area
+under the precision–recall curve; with one class, mAP@0.5 = AP@0.5), plus precision,
+recall and F1 at the dev-chosen threshold. 95% intervals come from 1,000 bootstrap
+resamples of the test frames.</p>
+<p><strong>Baselines and comparisons.</strong> The baseline is the default choice: YOLO11s at 640 px with
+the "dog" class only. It is compared with model size (n/s/m), input size (640/960), counting
+other animal classes, and the tracking filter.</p>
+<h2>4. Results</h2>
+<h3>4.1 Detector comparison (test half)</h3>
+<p><img alt="AP comparison" src="figures/ap_bars.png" />
+<em>Figure 3. Test AP@0.5 with 95% bootstrap intervals. Light green: every animal class counted as dog.</em></p>
+<table>
+<thead>
+<tr>
+<th>Setup</th>
+<th>dev AP50</th>
+<th>threshold</th>
+<th>test AP@0.5 [95% CI]</th>
+<th>precision</th>
+<th>recall</th>
+<th>F1 [95% CI]</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>YOLO11n @640</td>
+<td>0.32</td>
+<td>0.015</td>
+<td>0.34 [0.26–0.42]</td>
+<td>0.77</td>
+<td>0.34</td>
+<td>0.48 [0.39–0.55]</td>
+</tr>
+<tr>
+<td>YOLO11s @640 <em>(baseline)</em></td>
+<td>0.50</td>
+<td>0.023</td>
+<td>0.44 [0.36–0.52]</td>
+<td>0.71</td>
+<td>0.44</td>
+<td>0.54 [0.47–0.62]</td>
+</tr>
+<tr>
+<td>YOLO11m @640</td>
+<td>0.56</td>
+<td>0.029</td>
+<td>0.57 [0.49–0.65]</td>
+<td>0.91</td>
+<td>0.56</td>
+<td>0.70 [0.63–0.76]</td>
+</tr>
+<tr>
+<td>YOLO11s @960</td>
+<td>0.56</td>
+<td>0.043</td>
+<td>0.48 [0.40–0.56]</td>
+<td>0.82</td>
+<td>0.46</td>
+<td>0.59 [0.52–0.66]</td>
+</tr>
+<tr>
+<td>YOLO11m @960</td>
+<td>0.61</td>
+<td>0.010</td>
+<td>0.58 [0.49–0.67]</td>
+<td>0.84</td>
+<td>0.59</td>
+<td>0.69 [0.61–0.76]</td>
+</tr>
+<tr>
+<td>YOLO11s @640 + animals</td>
+<td>0.71</td>
+<td>0.044</td>
+<td>0.64 [0.57–0.71]</td>
+<td>0.77</td>
+<td>0.61</td>
+<td>0.68 [0.62–0.74]</td>
+</tr>
+<tr>
+<td>YOLO11m @640 + animals</td>
+<td>0.75</td>
+<td>0.025</td>
+<td>0.69 [0.62–0.75]</td>
+<td>0.87</td>
+<td>0.67</td>
+<td>0.76 [0.70–0.81]</td>
+</tr>
+<tr>
+<td><strong>YOLO11m @960 + animals</strong> <em>(final)</em></td>
+<td><strong>0.79</strong></td>
+<td>0.017</td>
+<td><strong>0.75 [0.67–0.83]</strong></td>
+<td>0.81</td>
+<td><strong>0.75</strong></td>
+<td><strong>0.78 [0.71–0.83]</strong></td>
+</tr>
+<tr>
+<td>YOLO11s @640 + tracking <em>(original settings)</em></td>
+<td>0.34</td>
+<td>0.145</td>
+<td>0.31 [0.23–0.40]</td>
+<td>0.98</td>
+<td>0.31</td>
+<td>0.47 [0.38–0.56]</td>
+</tr>
+</tbody>
+</table>
+<p><img alt="Precision-recall curves" src="figures/pr_curves.png" />
+<em>Figure 4. Precision–recall on the test half for all setups.</em></p>
+<ul>
+<li><strong>Model size matters more than input size.</strong> Going from s to m adds 0.13 AP at 640 px.
+  Going from 640 to 960 px adds little for m (0.57 to 0.58) but helps when combined with
+  counting other animals (0.69 to 0.75).</li>
+<li><strong>Counting other animal classes is the biggest single gain</strong>: +0.20 AP for s@640 and
+  +0.17 for m@960. The final setup is selected by dev AP, where it also ranks first.</li>
+<li><strong>Recall, not precision, is the limit.</strong> At their chosen thresholds all setups have
+  precision 0.7–0.9. Missed dogs dominate the errors.</li>
+<li><strong>The tracking filter with its original settings</strong> (tuned by hand for YOLO11s at 640
+  px) reaches 98% precision but keeps only 31% of dogs. Its thresholds were set far above
+  where this footage's correct boxes score, so the tracker was re-tuned for the final
+  setup (section 4.3).</li>
+</ul>
+<h3>4.2 Where it works and where it fails</h3>
+<p>Final setup, at its dev-chosen threshold, on all 180 labelled frames:</p>
+<table>
+<thead>
+<tr>
+<th>Subset</th>
+<th>Frames</th>
+<th>Dogs</th>
+<th>AP@0.5</th>
+<th>Precision</th>
+<th>Recall</th>
+<th>Baseline AP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Camera1 (fenced area)</td>
+<td>70</td>
+<td>132</td>
+<td>0.70</td>
+<td>0.87</td>
+<td>0.70</td>
+<td>0.41</td>
+</tr>
+<tr>
+<td>Camera3 (trough, road)</td>
+<td>60</td>
+<td>121</td>
+<td>0.82</td>
+<td>0.86</td>
+<td>0.84</td>
+<td>0.60</td>
+</tr>
+<tr>
+<td>Camera4 (bench, plants)</td>
+<td>50</td>
+<td>79</td>
+<td>0.79</td>
+<td>0.80</td>
+<td>0.80</td>
+<td>0.34</td>
+</tr>
+<tr>
+<td>Day</td>
+<td>145</td>
+<td>291</td>
+<td>0.77</td>
+<td>0.83</td>
+<td>0.77</td>
+<td>0.48</td>
+</tr>
+<tr>
+<td>Night (infrared)</td>
+<td>35</td>
+<td>41</td>
+<td>0.76</td>
+<td>0.97</td>
+<td>0.76</td>
+<td>0.35</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Dog size (share of frame area)</th>
+<th>Dogs</th>
+<th>Recall</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>tiny (&lt; 0.2%)</td>
+<td>9</td>
+<td>0.33</td>
+</tr>
+<tr>
+<td>small (0.2–1%)</td>
+<td>90</td>
+<td>0.57</td>
+</tr>
+<tr>
+<td>medium (1–5%)</td>
+<td>133</td>
+<td>0.83</td>
+</tr>
+<tr>
+<td>large (&gt; 5%)</td>
+<td>100</td>
+<td>0.93</td>
+</tr>
+</tbody>
+</table>
+<p>Of the 180 frames, 109 are fully correct, 51 have at least one missed dog and 20 have at
+least one false alarm. The full gallery is in <code>outputs/examples/</code>. Green boxes are hand
+labels, yellow are correct detections, red are false alarms, magenta are missed dogs and
+dashed orange are hard (ignored) labels.</p>
+<p><img alt="Successes" src="figures/success.jpg" />
+<em>Figure 5. Successes. (a) Camera3: six dogs, four of them tiny on the far road, found at
+confidences as low as 0.02. (b) Camera1 at night: four dogs including a pile of puppies,
+in infrared. (c) Camera4 against the sun: dogs in plants and behind the bench.</em></p>
+<p><img alt="False alarms" src="figures/false_alarms.jpg" />
+<em>Figure 6. False alarms. (a) A pile of puppies gets an extra box spanning two of them.
+(b) Part of the motorbike and rider is boxed at 0.02 confidence. (c) A dog lying in plants
+gets a second, shifted box.</em></p>
+<p><img alt="Missed dogs" src="figures/misses.jpg" />
+<em>Figure 7. Missed dogs. (a) Dark puppies at the back of Camera1's enclosure and a dog
+behind the fence mesh are missed; a loose box over a dog and the food tray counts as a
+false alarm. (b) A dog at the bowl at night, washed out by infrared glare. (c) A black dog
+cut off at the lens edge and pressed against other dogs.</em></p>
+<h3>4.3 Tracking and behaviour statistics</h3>
+<!-- TRACKING -->
+
+<h2>5. Limitations and failure modes</h2>
+<ul>
+<li><strong>Small and far-away dogs.</strong> Recall falls from 0.93 for large dogs to 0.57 for small and
+  0.33 for tiny ones. Far dogs on Camera3's road and at the back of Camera1's enclosure are
+  the most common misses. Tiling the frame, or a higher input resolution where a GPU is
+  available, would help.</li>
+<li><strong>Lighting.</strong> Infrared night frames lose colour and texture, and glare washes out dogs
+  near the lens. Night recall (0.76) matches day only because other animal classes are
+  counted. Backlight and lens flare at Camera4 lower confidences.</li>
+<li><strong>Occlusion.</strong> The chain-link fence covers all of Camera1's view, and plants, bowls and
+  the lens housing hide parts of dogs. Puppies pile on top of each other at the food. Groups
+  produce both misses (one box for two dogs) and false alarms (an extra box spanning two).</li>
+<li><strong>Calibration.</strong> Correct boxes often score below 0.1, so the useful threshold (about 0.02)
+  is far below the usual 0.25. It was set on dev data from these same cameras; a new camera
+  or season would need re-checking.</li>
+<li><strong>Domain gap.</strong> The detector never saw this footage, puppies, infrared or wide-angle
+  distortion. Fine-tuning on a few hundred labelled frames would likely be the largest
+  remaining improvement; this project's labels are reserved for honest evaluation.</li>
+<li><strong>Small evaluation set.</strong> 93 test frames give wide intervals (about ±0.08 AP), and Camera4
+  has only 11 clips. Differences between neighbouring setups (e.g. m@640+animals vs
+  m@960+animals) are within the noise.</li>
+<li><strong>Stray vs owned.</strong> The detector finds dogs, not stray dogs. Collars, owners and context
+  would be needed to tell them apart.</li>
+<li><strong>Counting.</strong> "Dogs in a clip" is a lower bound: dogs off-screen or missed are not
+  counted, and the same dog in two visits is counted twice. Telling dogs apart needs
+  recognition (section 6).</li>
+<li><strong>Three days of data.</strong> Hour-of-day patterns come from few days and depend on when people
+  feed the dogs. They describe these three days, not a general routine.</li>
+<li><strong>People.</strong> Feeders and a person on a motorbike appear. Person detections are not used,
+  and recognition is limited to dogs.</li>
+</ul>
+<h2>6. Dog recognition</h2>
+<p>The full design is in <code>docs/recognition_design.md</code>. In short:</p>
+<ul>
+<li><strong>Unit of recognition: the track.</strong> Several crops of one dog are averaged. The tracker
+  links within a clip; recognition links across clips.</li>
+<li><strong>Free training signal.</strong> Crops in one track are the same dog (positive pairs). Two tracks
+  in the same frame are different dogs (hard negative pairs). A person then joins tracks
+  into named dogs for a test set of 20–30 dogs.</li>
+<li><strong>Model.</strong> Start with a pretrained backbone. Fine-tune with a metric-learning loss
+  (triplet or ArcFace) on public animal re-identification data, then on local tracks. Use
+  part-based features for partly hidden dogs, and a separate, stricter night gallery
+  because colour disappears.</li>
+<li><strong>Matching.</strong> Cosine similarity, plus time and place: same camera within minutes means
+  probably the same dog, and two dogs in the same frame can't be one dog. An open-set
+  threshold decides "new dog", and a person confirms unsure links.</li>
+<li><strong>Evaluation.</strong> Rank-1/5 accuracy, re-ID mAP, pairwise precision and recall of links,
+  and error in the count of distinct dogs, split by day/night and same/other camera.</li>
+<li><strong>Challenges.</strong> Look-alike puppies, infrared, mostly top-down head-in-bowl views, fence
+  and plants, puppies growing, lens distortion and short clips.</li>
+</ul>
+<!-- REID -->
+
+<h2>7. Reproducibility</h2>
+<p>Everything is in the repository. <code>bash scripts/run_all.sh</code> downloads the footage from the
+GitHub release, downloads model weights and runs every step. The README lists the steps
+and times. Hand labels, the evaluation-frame list, the cached predictions on the evaluation
+frames, all metrics, tracks and statistics are committed under <code>outputs/</code>. Random choices
+use fixed seeds. Software versions are pinned in <code>requirements.txt</code>.</p>
+<h2>8. Next steps</h2>
+<ol>
+<li>Fine-tune the detector on a few hundred labelled frames from these cameras, especially
+   puppies, infrared and the fenced view.</li>
+<li>Tile large frames, or use a GPU at 1280 px, for far-away dogs.</li>
+<li>Collect weeks rather than days, and label a re-identification set of 20–30 dogs to
+   train and evaluate recognition.</li>
+<li>Add a side-on camera at dog eye level, which would give better views for recognition.</li>
+</ol></body></html>
