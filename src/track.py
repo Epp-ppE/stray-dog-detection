@@ -6,13 +6,15 @@ settings can be changed without re-running the CNN. Each clip is tracked on its 
 when it lasts >= MIN_TRACK_FRAMES and its best score >= MIN_TRACK_PEAK; this removes
 one-frame flickers, which are the most common false positives.
 
-usage: python track.py --det yolo11s_640
+usage: python track.py --det yolo11m_960 --merge-animals
 """
 import argparse
 from types import SimpleNamespace
 import numpy as np, pandas as pd
 from ultralytics.trackers.byte_tracker import BYTETracker
+import json
 from config import WORK, OUT, SAMPLE_FPS, INFER_WIDTH
+from boxes import merge_animals
 
 W, H = INFER_WIDTH, INFER_WIDTH * 9 // 16
 TRACKER = dict(track_high_thresh=0.35, track_low_thresh=0.10, new_track_thresh=0.40,
@@ -21,6 +23,8 @@ TRACKER = dict(track_high_thresh=0.35, track_low_thresh=0.10, new_track_thresh=0
 MIN_TRACK_FRAMES = 3                                 # >= 1 s at 3 fps
 MIN_TRACK_PEAK = 0.45
 DOG_LIKE = {"dog"}                                   # see --merge-animals
+# settings chosen by tune_tracker.py on the DEV clips override the defaults above
+TUNED = OUT / "eval" / "tracker_params.json"
 
 
 class Dets:
@@ -40,8 +44,8 @@ class Dets:
         return Dets(self.xyxy[m], self.conf[m], self.cls[m])
 
 
-def track_video(dets, n_frames):
-    trk = BYTETracker(SimpleNamespace(**TRACKER, tracker_type="bytetrack"))
+def track_video(dets, n_frames, params=TRACKER):
+    trk = BYTETracker(SimpleNamespace(**params, tracker_type="bytetrack"))
     by_f = {f: g for f, g in dets.groupby("frame")}
     rows = []
     for f in range(n_frames):
@@ -56,15 +60,21 @@ def track_video(dets, n_frames):
     return pd.DataFrame(rows, columns=["frame", "track_id", "x1", "y1", "x2", "y2", "score"])
 
 
-def main(det_tag, merge_animals=False):
+def load_detections(det_tag, animals=False):
     D = pd.read_csv(WORK / f"detections_{det_tag}.csv.gz")
-    F = pd.read_csv(OUT / "frames.csv.gz")
-    cls = DOG_LIKE | ({"cat", "sheep", "cow", "bear", "horse"} if merge_animals else set())
-    D = D[D.cls.isin(cls)]
-    nf = F.groupby("video_id").frame.max() + 1
+    if animals:
+        D = merge_animals(D, key=["video_id", "frame"])      # every animal class = dog, duplicates removed
+    else:
+        D = D[D.cls.isin(DOG_LIKE)]
+    return D
+
+
+def run_tracking(D, nf, params=TRACKER, min_frames=MIN_TRACK_FRAMES, min_peak=MIN_TRACK_PEAK):
+    """Track every clip in nf (video_id -> number of frames); returns all tracks with a 'confirmed' flag."""
     out = []
+    by_vid = {v: g for v, g in D.groupby("video_id")}
     for vid, n in nf.items():
-        t = track_video(D[D.video_id == vid], int(n))
+        t = track_video(by_vid.get(vid, D.iloc[:0]), int(n), params)
         if len(t):
             t.insert(0, "video_id", vid)
             out.append(t)
@@ -72,10 +82,25 @@ def main(det_tag, merge_animals=False):
     T["t"] = (T.frame / SAMPLE_FPS).round(3)
     T["uid"] = T.video_id + ":" + T.track_id.astype(str)
     agg = T.groupby("uid").agg(n=("frame", "size"), peak=("score", "max"))
-    good = agg[(agg.n >= MIN_TRACK_FRAMES) & (agg.peak >= MIN_TRACK_PEAK)].index
+    good = agg[(agg.n >= min_frames) & (agg.peak >= min_peak)].index
     T["confirmed"] = T.uid.isin(good)
-    tag = det_tag + ("_animals" if merge_animals else "")
+    return T
+
+
+def main(det_tag, animals=False):
+    D = load_detections(det_tag, animals)
+    F = pd.read_csv(OUT / "frames.csv.gz")
+    nf = F.groupby("video_id").frame.max() + 1
+    params, min_frames, min_peak = dict(TRACKER), MIN_TRACK_FRAMES, MIN_TRACK_PEAK
+    tag = det_tag + ("_animals" if animals else "")
+    if TUNED.exists():
+        tuned = json.loads(TUNED.read_text())
+        if tuned.get("det_tag") == tag:
+            params.update(tuned["tracker"]); min_frames, min_peak = tuned["min_frames"], tuned["min_peak"]
+            print(f"using tuned tracker settings from {TUNED.name}")
+    T = run_tracking(D, nf, params, min_frames, min_peak)
     T.to_csv(OUT / f"tracks_{tag}.csv.gz", index=False)
+    good = T[T.confirmed].uid.unique()
     print(f"[{tag}] {T.uid.nunique()} raw tracks, {len(good)} confirmed, "
           f"in {T[T.confirmed].video_id.nunique()} of {len(nf)} clips")
 

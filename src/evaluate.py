@@ -22,9 +22,9 @@ usage: python evaluate.py            (runs missing predictions, then scores)
 import json, argparse
 import numpy as np, pandas as pd
 from config import OUT, WORK, MODELS, SAMPLE_FPS
+from boxes import iou, merge_animals, ANIMALS
 
 CONFIGS = ["yolo11n_640", "yolo11s_640", "yolo11m_640", "yolo11s_960", "yolo11m_960"]
-ANIMALS = {"dog", "cat", "sheep", "cow", "bear", "horse"}
 EVAL = OUT / "eval"
 RNG = np.random.default_rng(0)
 
@@ -51,38 +51,13 @@ def predict(tag):
     return df
 
 
-def merge_animals(P, iou_thr=0.6):
-    """Treat every animal class as 'dog' and drop duplicate boxes on the same animal
-    (class-agnostic non-maximum suppression: keep the most confident box)."""
-    P = P[P.cls.isin(ANIMALS)].sort_values("conf", ascending=False)
-    keep = []
-    for fid, g in P.groupby("frame_id", sort=False):
-        B = g[["x1", "y1", "x2", "y2"]].to_numpy(); alive = np.ones(len(g), bool)
-        for i in range(len(g)):
-            if not alive[i]:
-                continue
-            keep.append(g.index[i])
-            o = iou(B[i], B[i + 1:]); alive[i + 1:] &= o < iou_thr
-    return P.loc[keep].assign(cls="dog")
-
-
-def tracked_preds(det_tag):
+def tracked_preds(track_tag, T=None):
     """Boxes the full pipeline keeps after tracking (confirmed tracks only) on the eval frames."""
-    T = pd.read_csv(OUT / f"tracks_{det_tag}.csv.gz")
+    T = pd.read_csv(OUT / f"tracks_{track_tag}.csv.gz") if T is None else T
     T = T[T.confirmed]
     fr = pd.read_csv(EVAL / "eval_frames.csv")
     m = T.merge(fr[["frame_id", "video_id", "frame"]], on=["video_id", "frame"])
     return pd.DataFrame(dict(frame_id=m.frame_id, cls="dog", conf=m.score, x1=m.x1, y1=m.y1, x2=m.x2, y2=m.y2))
-
-
-def iou(a, B):
-    if len(B) == 0:
-        return np.zeros(0)
-    ix = np.clip(np.minimum(a[2], B[:, 2]) - np.maximum(a[0], B[:, 0]), 0, None)
-    iy = np.clip(np.minimum(a[3], B[:, 3]) - np.maximum(a[1], B[:, 1]), 0, None)
-    inter = ix * iy
-    ua = (a[2] - a[0]) * (a[3] - a[1]) + (B[:, 2] - B[:, 0]) * (B[:, 3] - B[:, 1]) - inter
-    return inter / np.maximum(ua, 1e-9)
 
 
 def match(preds, gt, frames, iou_thr=0.5):
@@ -174,10 +149,11 @@ def main(boot=1000):
         variants[tag] = P[P.cls == "dog"]
     for tag in ["yolo11s_640", "yolo11m_640", "yolo11m_960"]:
         variants[f"{tag}+animals"] = merge_animals(predict(tag))
-    try:
-        variants["yolo11s_640+tracking"] = tracked_preds("yolo11s_640")
-    except FileNotFoundError:
-        pass
+    for tt in ["yolo11s_640", "yolo11m_960_animals"]:
+        try:
+            variants[f"{tt.replace('_animals', '+animals')}+tracking"] = tracked_preds(tt)
+        except FileNotFoundError:
+            pass
 
     res, curves = {}, {}
     for name, P in variants.items():

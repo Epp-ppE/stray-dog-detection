@@ -17,10 +17,10 @@ W, H = 1280, 720
 
 
 def preds_for(setup):
+    if setup.endswith("+tracking"):
+        return E.tracked_preds(setup[: -len("+tracking")].replace("+animals", "_animals"))
     if setup.endswith("+animals"):
         return E.merge_animals(E.predict(setup.split("+")[0]))
-    if setup.endswith("+tracking"):
-        return E.tracked_preds(setup.split("+")[0])
     P = E.predict(setup)
     return P[P.cls == "dog"]
 
