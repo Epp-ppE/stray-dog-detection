@@ -95,6 +95,7 @@ below 0.1. At the common default of 0.25, the final setup keeps 98% precision bu
 drops from 0.75 to 0.60.
 
 **Statistics definitions.**
+
 * *Dogs in a clip:* the most confirmed tracks visible in any one frame. This is a lower bound
   on distinct dogs that does not grow when the tracker loses and re-finds a dog.
 * *Dog-seconds:* the number of dogs in each frame, summed and divided by 3 frames per second.
@@ -111,6 +112,7 @@ was seen**, stratified by camera and day/night (Camera1 50 day + 20 night, Camer
 Camera4 50 day). At most 2–6 frames come from one clip, at least 3 s apart, because
 neighbouring frames are near-copies. The frames are pixel-identical to what the detector
 sees. They were labelled in a purpose-built browser tool with a written guide:
+
 * one box per dog, covering its visible extent only;
 * a **hard** flag for dogs less than about a quarter visible or too small or unclear to be sure;
 * fixed background objects (a rock that appears in every Camera1 frame) are not dogs.

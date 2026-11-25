@@ -160,24 +160,28 @@ chosen box thresholds are very low (0.01–0.04), because this footage is far fr
 photos and the model's confidence is badly calibrated for it: many correct dog boxes score
 below 0.1. At the common default of 0.25, the final setup keeps 98% precision but recall
 drops from 0.75 to 0.60.</p>
-<p><strong>Statistics definitions.</strong>
-* <em>Dogs in a clip:</em> the most confirmed tracks visible in any one frame. This is a lower bound
-  on distinct dogs that does not grow when the tracker loses and re-finds a dog.
-* <em>Dog-seconds:</em> the number of dogs in each frame, summed and divided by 3 frames per second.
-* <em>Visit:</em> consecutive clips with dogs on one camera, merged when the gap is ≤ 2 minutes
-  (the camera records bursts of short clips).
-* <em>Moving vs resting:</em> box-centre speed in body lengths per second, using box height as a
-  proxy for body length. Above 0.25 counts as moving.
-* <em>Close contact:</em> two dogs whose box centres are closer than their average box width.</p>
+<p><strong>Statistics definitions.</strong></p>
+<ul>
+<li><em>Dogs in a clip:</em> the most confirmed tracks visible in any one frame. This is a lower bound
+  on distinct dogs that does not grow when the tracker loses and re-finds a dog.</li>
+<li><em>Dog-seconds:</em> the number of dogs in each frame, summed and divided by 3 frames per second.</li>
+<li><em>Visit:</em> consecutive clips with dogs on one camera, merged when the gap is ≤ 2 minutes
+  (the camera records bursts of short clips).</li>
+<li><em>Moving vs resting:</em> box-centre speed in body lengths per second, using box height as a
+  proxy for body length. Above 0.25 counts as moving.</li>
+<li><em>Close contact:</em> two dogs whose box centres are closer than their average box width.</li>
+</ul>
 <h2>3. Evaluation methodology</h2>
 <p><strong>Labelled set.</strong> 180 frames from 115 clips were drawn at random <strong>before any model output
 was seen</strong>, stratified by camera and day/night (Camera1 50 day + 20 night, Camera3 45 + 15,
 Camera4 50 day). At most 2–6 frames come from one clip, at least 3 s apart, because
 neighbouring frames are near-copies. The frames are pixel-identical to what the detector
-sees. They were labelled in a purpose-built browser tool with a written guide:
-* one box per dog, covering its visible extent only;
-* a <strong>hard</strong> flag for dogs less than about a quarter visible or too small or unclear to be sure;
-* fixed background objects (a rock that appears in every Camera1 frame) are not dogs.</p>
+sees. They were labelled in a purpose-built browser tool with a written guide:</p>
+<ul>
+<li>one box per dog, covering its visible extent only;</li>
+<li>a <strong>hard</strong> flag for dogs less than about a quarter visible or too small or unclear to be sure;</li>
+<li>fixed background objects (a rock that appears in every Camera1 frame) are not dogs.</li>
+</ul>
 <p>The result: 332 dog boxes, 28 hard boxes and 20 frames with no dog. No frames were skipped.</p>
 <p><strong>Split.</strong> Whole clips are assigned to <strong>dev</strong> (87 frames) or <strong>test</strong> (93 frames), so no
 clip appears in both. Thresholds, the tracker settings and the choice of final setup use
