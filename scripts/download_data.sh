@@ -13,5 +13,5 @@ for a in "${ASSETS[@]}"; do
   else curl -fL --retry 3 -o "$a" "https://github.com/$REPO/releases/download/$TAG/$a"; fi
 done
 cd ../..
-for a in "${ASSETS[@]}"; do unzip -q -n "data/zips/$a" -d data/raw; done
+for a in "${ASSETS[@]}"; do "${PYTHON:-python}" -m zipfile -e "data/zips/$a" data/raw; done   # Python unzip: works without the unzip tool
 echo "done: $(find data/raw -type f | wc -l) files in data/raw"

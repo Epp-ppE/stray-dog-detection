@@ -84,7 +84,7 @@ def slides():
                       "Hand-labelled: 332 dogs, 28 'hard' (mostly hidden, ignored), 20 empty frames",
                       "Split by clip: dev (87 frames) to tune thresholds, test (93 frames) to report",
                       "Correct = box overlap (IoU) ≥ 0.5 · AP@0.5, precision, recall, F1",
-                      "95% intervals from 1,000 bootstrap resamples · 9 setups compared"],
+                      "95% intervals from 1,000 bootstrap resamples · 8 detector setups compared"],
              notes="Because there were no labels, I made a small test set. The frames were picked at random before looking at results, so the test isn't tilted towards easy frames. Everything is tuned on dev and reported on test, so the numbers aren't flattered by tuning."),
         dict(title="Results: bigger model + every animal class = dog", image="report/figures/ap_bars.png", image_side=True,
              bullets=[f"Baseline YOLO11s @640: AP {b['test_AP50']:.2f}, F1 {b['test_F1']:.2f}",
@@ -263,8 +263,8 @@ if __name__ == "__main__":
     sl = slides()
     (S / "slides.html").write_text(render_html(sl))
     js = f"""const {{chromium}}=require('playwright');(async()=>{{const b=await chromium.launch();const p=await b.newPage();
-await p.goto('file://{S / "slides.html"}',{{waitUntil:'networkidle'}});
-await p.pdf({{path:'{S / "slides.pdf"}',width:'1280px',height:'720px',printBackground:true}});await b.close();}})()"""
+await p.goto('{(S / "slides.html").as_uri()}',{{waitUntil:'networkidle'}});
+await p.pdf({{path:'{(S / "slides.pdf").as_posix()}',width:'1280px',height:'720px',printBackground:true}});await b.close();}})()"""
     subprocess.run(["node", "-e", js], check=True)
     render_pptx(sl)
     print(f"wrote slides.pdf and slides.pptx ({len(sl)} slides)")

@@ -11,7 +11,7 @@ visit and activity statistics per camera. Before any modelling, two hidden probl
 data were found and fixed: 22 duplicate files, and wrong timestamps in Camera1's filenames,
 which were recovered from the clock burned into the video. Because no labels existed, 180
 frames were chosen at random and hand-labelled (332 dogs), split by clip into a **dev** half
-for tuning and a **test** half for reporting. Nine detector setups were compared. A
+for tuning and a **test** half for reporting. Eight detector setups were compared, plus two with tracking. A
 COCO-pretrained **YOLO11m at 960 px, counting every animal class as "dog"**, reached
 **AP@0.5 = 0.75 [95% CI 0.67–0.83]** and **F1 = 0.78** on the test half, against 0.44 and
 0.54 for the YOLO11s baseline. The largest single gain came from counting every animal
