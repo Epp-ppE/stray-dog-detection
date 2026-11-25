@@ -1,0 +1,9 @@
+{
+  "camera": "Camera3_LocationC",
+  "tracks_embedded": 150,
+  "groups": 72,
+  "groups_spanning_2plus_clips": 30,
+  "link_distance": 0.5,
+  "model": "yolo11s-cls (ImageNet) pooled features, no fine-tuning",
+  "note": "No identity labels: groups are candidates for a person to verify, not confirmed identities."
+}

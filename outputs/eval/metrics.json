@@ -673,5 +673,80 @@
         "FN": 34
       }
     }
+  },
+  "yolo11m_960+animals+tracking": {
+    "threshold_from_dev": 0.055,
+    "dev_AP50": 0.641,
+    "dev_F1": 0.768,
+    "test_AP50": 0.544,
+    "test_AP50_CI95": [
+      0.468,
+      0.632
+    ],
+    "test_precision": 0.949,
+    "test_recall": 0.54,
+    "test_F1": 0.689,
+    "test_F1_CI95": [
+      0.62,
+      0.762
+    ],
+    "test_TP": 94,
+    "test_FP": 5,
+    "test_FN": 80,
+    "at_default_0_25": {
+      "precision": 0.9591836734693877,
+      "recall": 0.5402298850574713,
+      "f1": 0.6911764705882353,
+      "tp": 94,
+      "fp": 4,
+      "fn": 80
+    },
+    "breakdown_all_frames": {
+      "camera=Camera1_LocationA": {
+        "frames": 70,
+        "dogs": 132,
+        "AP50": 0.493,
+        "precision": 0.941,
+        "recall": 0.485,
+        "FP": 4,
+        "FN": 68
+      },
+      "camera=Camera3_LocationC": {
+        "frames": 60,
+        "dogs": 121,
+        "AP50": 0.668,
+        "precision": 0.942,
+        "recall": 0.669,
+        "FP": 5,
+        "FN": 40
+      },
+      "camera=Camera4_LocationD": {
+        "frames": 50,
+        "dogs": 79,
+        "AP50": 0.633,
+        "precision": 1.0,
+        "recall": 0.633,
+        "FP": 0,
+        "FN": 29
+      },
+      "night=False": {
+        "frames": 145,
+        "dogs": 291,
+        "AP50": 0.591,
+        "precision": 0.951,
+        "recall": 0.595,
+        "FP": 9,
+        "FN": 118
+      },
+      "night=True": {
+        "frames": 35,
+        "dogs": 41,
+        "AP50": 0.585,
+        "precision": 1.0,
+        "recall": 0.537,
+        "FP": 0,
+        "FN": 19
+      }
+    }
   }
 }

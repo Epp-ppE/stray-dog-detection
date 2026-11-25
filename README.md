@@ -37,6 +37,21 @@ pretrained detector often calls puppies "cat", and calls dogs in night-time infr
 breakdowns by camera and day/night, and the tracking results are in
 [`outputs/eval/metrics.json`](outputs/eval/metrics.json) and the report.
 
+**Tracking and statistics.** With ByteTrack settings tuned on dev, the boxes of confirmed
+tracks reach test precision **0.95** at recall 0.54 (F1 0.69), so the statistics count
+almost only real dogs and are lower bounds. On all 425 clips:
+
+| | Camera1 (feeding area) | Camera3 (water trough) | Camera4 (bench) |
+|---|---|---|---|
+| Clips with a dog | 98% | 92% | 100% |
+| Visits (gaps ≤ 2 min merged) | 136 (45/day) | 34 (11/day) | 8 (4/day) |
+| Most dogs in one frame | 4 | 7 | 4 |
+| Dog-minutes on screen | 132 | 44 | 4 |
+| Share of dog time moving | 11% | 16% | 23% |
+
+Charts: [`outputs/stats/`](outputs/stats/). Recognition demo (no training): 150 Camera3
+tracks grouped into 72 candidate dogs, see [`outputs/reid/`](outputs/reid/).
+
 Two problems in the raw data were found and fixed first:
 * **22 of 447 files are exact duplicates.** They are removed by file fingerprint, leaving 425 unique clips (2.44 h).
 * **Camera1's filenames are export times, not recording times.** The real time is read from

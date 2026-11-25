@@ -31,8 +31,11 @@ COCO-pretrained <strong>YOLO11m at 960 px, counting every animal class as "dog"<
 class as dog, because the pretrained model often calls puppies "cat" and calls dogs in
 night-time infrared "sheep" or "cow". The main remaining failures are small or far-away
 dogs, dark dogs in infrared, dogs behind the chain-link fence, and groups of overlapping
-puppies. A design for recognising individual dogs across clips is given, with a small
-untrained demo.</p>
+puppies. On all 425 clips, tracking with settings tuned on dev keeps 95% precision at 54%
+recall, and gives conservative statistics: Camera1's feeding area sees about 45 dog visits
+a day, mostly in daylight, and dogs spend under a quarter of their time moving. A design
+for recognising individual dogs across clips is given, with a small untrained demo that
+groups 150 Camera3 tracks into 72 candidate dogs.</p>
 <hr />
 <h2>1. Data</h2>
 <table>
@@ -285,6 +288,15 @@ other animal classes, and the tracking filter.</p>
 <td>0.31</td>
 <td>0.47 [0.38–0.56]</td>
 </tr>
+<tr>
+<td>YOLO11m @960 + animals + tracking <em>(tuned, used for statistics)</em></td>
+<td>0.64</td>
+<td>0.055</td>
+<td>0.54 [0.47–0.63]</td>
+<td>0.95</td>
+<td>0.54</td>
+<td>0.69 [0.62–0.76]</td>
+</tr>
 </tbody>
 </table>
 <p><img alt="Precision-recall curves" src="figures/pr_curves.png" />
@@ -413,8 +425,137 @@ behind the fence mesh are missed; a loose box over a dog and the food tray count
 false alarm. (b) A dog at the bowl at night, washed out by infrared glare. (c) A black dog
 cut off at the lens edge and pressed against other dogs.</em></p>
 <h3>4.3 Tracking and behaviour statistics</h3>
-<!-- TRACKING -->
-
+<p>The final detector was run on all 425 clips (26,325 sampled frames, 2.7 hours on 4 CPU
+cores). ByteTrack then linked boxes within each clip. Its settings were chosen on the dev
+clips by a grid search over 64 combinations (<code>src/tune_tracker.py</code>), maximising F1 of the
+boxes that survive tracking:</p>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Original</th>
+<th>Tuned on dev</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Start a new track / match in first stage</td>
+<td>conf ≥ 0.40 / 0.35</td>
+<td>conf ≥ 0.10 / 0.10</td>
+</tr>
+<tr>
+<td>Match in second stage</td>
+<td>conf ≥ 0.10</td>
+<td>conf ≥ 0.01</td>
+</tr>
+<tr>
+<td>Confirmed track</td>
+<td>≥ 3 frames, peak conf ≥ 0.45</td>
+<td>≥ 2 frames, peak conf ≥ 0.10</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Tracking trades recall for precision.</strong> On the test half, the boxes of confirmed tracks
+have <strong>precision 0.95</strong> (5 false alarms in 93 frames) but <strong>recall 0.54</strong>, against 0.81 and
+0.75 for the detector alone. Precision matters more for statistics, because a false track
+adds a visit that never happened, while a dog missed in some frames is usually still
+found in others. The statistics below are therefore <strong>lower bounds</strong>: the dogs they count
+are almost all real, but brief, small and far-away dogs are often not counted.</p>
+<p>Result: 1,073 confirmed tracks in 413 of the 425 clips. Clips with dogs less than 2
+minutes apart form one <strong>visit</strong>.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Camera1 (fenced feeding area)</th>
+<th>Camera3 (water trough)</th>
+<th>Camera4 (bench)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Clips / footage</td>
+<td>341 / 117 min</td>
+<td>73 / 26 min</td>
+<td>11 / 4 min</td>
+</tr>
+<tr>
+<td>Clips with a dog</td>
+<td>98%</td>
+<td>92%</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>Visits</td>
+<td>136 (45 per day)</td>
+<td>34 (11 per day)</td>
+<td>8 (4 per day)</td>
+</tr>
+<tr>
+<td>Median visit length</td>
+<td>32 s</td>
+<td>29 s</td>
+<td>22 s</td>
+</tr>
+<tr>
+<td>Most dogs in one frame</td>
+<td>4</td>
+<td>7</td>
+<td>4</td>
+</tr>
+<tr>
+<td>Mean dogs per visit (most at once)</td>
+<td>1.8</td>
+<td>2.2</td>
+<td>2.1</td>
+</tr>
+<tr>
+<td>Dog-minutes on screen</td>
+<td>132</td>
+<td>44</td>
+<td>4</td>
+</tr>
+<tr>
+<td>Share of dog time moving</td>
+<td>11%</td>
+<td>16%</td>
+<td>23%</td>
+</tr>
+<tr>
+<td>Dog-minutes in close contact</td>
+<td>14</td>
+<td>6</td>
+<td>0.2</td>
+</tr>
+<tr>
+<td>Night visits</td>
+<td>29</td>
+<td>4</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<p><img alt="Activity by hour" src="figures/activity_by_hour.png" />
+<em>Figure 8. Dog-minutes detected (green) and footage recorded (grey) by hour of day, all
+days pooled. Dog-minutes can exceed footage minutes because two dogs on screen for one
+minute count as two dog-minutes.</em></p>
+<p><img alt="Visit timeline" src="figures/visit_timeline.png" />
+<em>Figure 9. Every visit over the three days; dot size is the number of dogs.</em></p>
+<p>What the numbers say, within the limits above:</p>
+<ul>
+<li><strong>The motion trigger almost always fires for dogs.</strong> 92–100% of clips contain a
+  confirmed dog, so the footage itself is a usable record of dog presence.</li>
+<li><strong>Camera1's feeding area is the busiest spot</strong>, with about 45 visits a day, activity from
+  06:00 to 18:00 and some visits through the night (29 night visits). Camera3's trough is
+  visited mostly in the morning and mid-afternoon; the 15:00 peak with up to 7 dogs is a
+  litter of puppies on 6 January.</li>
+<li><strong>Dogs mostly stand, eat and drink.</strong> Only 11–23% of dog time is spent moving, which fits
+  cameras pointed at food and water.</li>
+<li><strong>Activity follows the recording, not only the dogs.</strong> The cameras record only when
+  triggered, and Camera4 recorded only 4 minutes, so hours with no footage say nothing
+  about dogs. Hour-of-day patterns come from three days and are likely shaped by feeding
+  times.</li>
+</ul>
 <h2>5. Limitations and failure modes</h2>
 <ul>
 <li><strong>Small and far-away dogs.</strong> Recall falls from 0.93 for large dogs to 0.57 for small and
@@ -466,8 +607,28 @@ cut off at the lens edge and pressed against other dogs.</em></p>
 <li><strong>Challenges.</strong> Look-alike puppies, infrared, mostly top-down head-in-bowl views, fence
   and plants, puppies growing, lens distortion and short clips.</li>
 </ul>
-<!-- REID -->
-
+<h3>6.1 Demo: grouping Camera3's tracks without training</h3>
+<p><code>src/reid_demo.py</code> tries the idea with no training and no identity labels:</p>
+<ol>
+<li>Take up to 4 sharp crops from each confirmed track on Camera3. Skip crops under 12% of
+   the frame height and crops that overlap another dog.</li>
+<li>Describe each crop with an ImageNet classifier's features (YOLO11s-cls, 512 numbers)
+   plus a colour histogram, and average the descriptions over the track.</li>
+<li>Group tracks by average-linkage clustering (cosine distance &lt; 0.5). Two tracks seen in
+   the same frame are never put in one group.</li>
+</ol>
+<p>Result: 150 tracks formed <strong>72 groups</strong>, of which <strong>30 span two or more clips</strong>. The groups
+are candidates for a person to check, not confirmed identities: with no identity labels,
+accuracy cannot be measured, and a labelled set of 20–30 dogs is the first step of the
+full design.</p>
+<p><img alt="A good group" src="figures/reid_good.jpg" />
+<em>Figure 10. A group that looks right: the same white puppy with a black face patch, in seven
+tracks across six clips, from 6 to 8 January.</em></p>
+<p><img alt="A mixed group" src="figures/reid_mixed.jpg" />
+<em>Figure 11. A group that mixes dogs: several look-alike white-and-tan littermates are
+joined. Generic features capture coat colour and pose, not the fine details that separate
+siblings. This is the case the fine-tuned model and the part-based features in the design
+are meant to fix.</em></p>
 <h2>7. Reproducibility</h2>
 <p>Everything is in the repository. <code>bash scripts/run_all.sh</code> downloads the footage from the
 GitHub release, downloads model weights and runs every step. The README lists the steps
