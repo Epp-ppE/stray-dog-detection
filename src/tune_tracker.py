@@ -1,8 +1,8 @@
 """Choose ByteTrack thresholds and the track-confirmation rule on the DEV clips only.
 
-The YOLO11m@960 + animals detector is well calibrated at much lower scores than the
-YOLO11s defaults the tracker started with (its dev-chosen box threshold is ~0.02), so the
-tracker thresholds are re-tuned: a grid of settings is tracked on every dev clip and scored
+Correct boxes from the YOLO11m@960 + animals detector often score far below the YOLO11s-era
+tracker defaults (its dev-chosen box threshold is ~0.02), so the tracker thresholds are
+re-tuned: a grid of settings is tracked on every dev clip and scored
 by F1 of the confirmed track boxes on the dev labelled frames. The winner is written to
 outputs/eval/tracker_params.json, which track.py then uses. Test frames are never looked at.
 

@@ -72,8 +72,6 @@ def main(setup):
         for a, c in fp: box(img, a, RED, f"false alarm {c:.2f}")
         for g in G[~used]: box(img, g, MAGENTA, "missed")
         cat = "missed" if (~used).any() else ("false_alarm" if fp else "correct")
-        if fp and cat == "missed":
-            cat = "missed"
         name = f"{r.camera[:7].lower()}_{'night' if r.night else 'day'}_{r.frame_id}.jpg"
         cv2.imwrite(str(out / cat / name), cv2.resize(img, (800, 450), interpolation=cv2.INTER_AREA), [cv2.IMWRITE_JPEG_QUALITY, 74])
         rows.append(dict(frame_id=r.frame_id, camera=r.camera, night=r.night, split=r.split, dogs=len(G), hard=len(Hd),
