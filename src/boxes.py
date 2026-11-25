@@ -20,7 +20,7 @@ def merge_animals(P, key="frame_id", iou_thr=0.6):
     """Count every COCO animal class as 'dog' and remove duplicate boxes on the same animal
     (class-agnostic non-maximum suppression: within one frame, a box overlapping a more
     confident box by IoU >= iou_thr is dropped). `key` names the frame-id column(s)."""
-    P = P[P.cls.isin(ANIMALS)].sort_values("conf", ascending=False)
+    P = P[P.cls.isin(ANIMALS)].reset_index(drop=True).sort_values("conf", ascending=False)
     keep = []
     for _, g in P.groupby(key, sort=False):
         B = g[["x1", "y1", "x2", "y2"]].to_numpy()
