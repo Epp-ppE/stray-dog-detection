@@ -1,9 +1,11 @@
 # Stray dog detection in raw camera footage (Chiang Mai)
 
+**Phupa Denphatcharangkul** · Student ID 01223049 · CMKL course assignment
+
 A complete, CPU-only pipeline that **detects and locates dogs** in unlabelled, motion-triggered
 outdoor camera footage, links detections into **tracks**, and turns them into **visit and
 activity statistics** per camera. It includes a hand-labelled evaluation set, a comparison
-of 9 detector setups, a success and failure gallery, and a design (plus a small demo) for
+of 8 detector setups, a success and failure gallery, and a design (plus a small demo) for
 **recognising individual dogs** across clips.
 
 **Deliverables**
@@ -13,8 +15,8 @@ of 9 detector setups, a success and failure gallery, and a design (plus a small 
 | Technical report | [`report/report.pdf`](report/report.pdf) (source: [`report/report.md`](report/report.md)) |
 | Presentation slides | [`slides/slides.pdf`](slides/slides.pdf), editable [`slides/slides.pptx`](slides/slides.pptx) |
 | Dog recognition design | [`docs/recognition_design.md`](docs/recognition_design.md) |
-| Code explained line by line | [`docs/code_walkthrough.pdf`](docs/code_walkthrough.pdf) |
-| Project brief (data findings) | [`docs/project_brief.pdf`](docs/project_brief.pdf) |
+| Code explained line by line | [`docs/code_walkthrough.pdf`](https://github.com/Epp-ppE/stray-dog-detection/blob/main/docs/code_walkthrough.pdf) (in the GitHub repo) |
+| Project brief (data findings) | [`docs/project_brief.pdf`](https://github.com/Epp-ppE/stray-dog-detection/blob/main/docs/project_brief.pdf) (in the GitHub repo) |
 
 ---
 

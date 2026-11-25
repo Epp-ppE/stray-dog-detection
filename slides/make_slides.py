@@ -51,7 +51,7 @@ def slides():
     out = [
         dict(kind="title", title="Finding stray dogs in raw camera footage",
              subtitle="Detection, tracking and visit statistics from three community cameras in Chiang Mai",
-             foot="CMKL · Epp-ppE/stray-dog-detection",
+             foot="Phupa Denphatcharangkul · 01223049 · CMKL",
              notes="Hello. This project builds a complete pipeline that finds and locates dogs in unlabelled camera footage, and turns the detections into information about visits and activity."),
         dict(title="Why count stray dogs?",
              bullets=["Rabies, road safety and animal welfare are real risks in Thai communities",

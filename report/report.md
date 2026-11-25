@@ -1,5 +1,7 @@
 # Detecting and locating stray dogs in raw camera footage from Chiang Mai
 
+**Phupa Denphatcharangkul** · Student ID 01223049
+
 *Technical report · CMKL course assignment · repository: `Epp-ppE/stray-dog-detection`*
 
 ## Summary
