@@ -137,7 +137,7 @@ details ul{margin:8px 0 2px;padding-left:20px;line-height:1.5;max-width:70ch}
     let draft = null;
     try { draft = JSON.parse(LS('draft:' + f.frame_id) || 'null') } catch (e) {}
     cur = JSON.parse(JSON.stringify(draft || saved || { boxes: [], status: '' }));
-    sel = -1; dirty = !!draft;
+    sel = -1; dirty = !!draft; start = null; $('ghostLayer').textContent = '';
     $('img').src = 'img/' + f.frame_id + '.jpg';
     $('cam').textContent = f.camera.replace('_Location', ' · ');
     $('dn').textContent = f.night ? 'night (IR)' : 'day';
@@ -206,7 +206,8 @@ details ul{margin:8px 0 2px;padding-left:20px;line-height:1.5;max-width:70ch}
   let start = null, ghost = null;
   function rel(e) { const r = $('img').getBoundingClientRect(); return { x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)), w: r.width, h: r.height }; }
   canvas.addEventListener('pointerdown', e => {
-    if (pan || !cur) return;
+    if (pan || !cur || !e.isPrimary || start) return;
+    $('ghostLayer').textContent = '';
     e.preventDefault(); canvas.setPointerCapture(e.pointerId);
     start = rel(e);
     ghost = document.createElement('div'); ghost.className = 'box sel'; $('ghostLayer').appendChild(ghost);
@@ -218,7 +219,7 @@ details ul{margin:8px 0 2px;padding-left:20px;line-height:1.5;max-width:70ch}
   });
   function end(e) {
     if (!start) return;
-    const p = rel(e), s = start; start = null; ghost && ghost.remove(); ghost = null;
+    const p = rel(e), s = start; start = null; $('ghostLayer').textContent = ''; ghost = null;
     const wpx = Math.abs(p.x - s.x) * p.w, hpx = Math.abs(p.y - s.y) * p.h;
     if (wpx < 14 && hpx < 14) {          // a tap: select the smallest box under the finger
       let best = -1, area = 9;
@@ -229,7 +230,7 @@ details ul{margin:8px 0 2px;padding-left:20px;line-height:1.5;max-width:70ch}
     cur.status = 'done'; sel = cur.boxes.length - 1; touched(); render();
   }
   canvas.addEventListener('pointerup', end);
-  canvas.addEventListener('pointercancel', () => { start = null; ghost && ghost.remove(); ghost = null; });
+  canvas.addEventListener('pointercancel', () => { start = null; $('ghostLayer').textContent = ''; ghost = null; });
 
   function setZoom(z) { zoom = z; $('canvas').style.width = (z * 100) + '%'; $('zoom').textContent = 'Zoom ' + z + '×'; fit(); }
   function fit() {
