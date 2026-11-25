@@ -77,7 +77,7 @@ larger model helps hard poses and infrared. Speed on the 4-core CPU used here: 4
 226 ms per frame at 640 px (n / s / m), and 204 / 492 ms at 960 px (s / m).
 
 **Counting every animal class as dog.** COCO has no "puppy" class, and its night images
-are colour photos, not infrared. Of the labelled dogs the final model found, 26% had a
+are colour photos, not infrared. Of the labelled dogs the final model found, 28% had a
 non-dog class as their most confident label (mostly "cat"), and 52% at night. Counting all
 animal classes (cat, dog, horse, sheep, cow, bear) as dog recovers these. The cost is that
 real cats or livestock would also be counted as dogs. No other animals appeared in the 180
@@ -131,6 +131,9 @@ other animal classes, and the tracking filter.
 
 ### 4.1 Detector comparison (test half)
 
+![AP comparison](figures/ap_bars.png)
+*Figure 3. Test AP@0.5 with 95% bootstrap intervals. Light green: every animal class counted as dog.*
+
 | Setup | dev AP50 | threshold | test AP@0.5 [95% CI] | precision | recall | F1 [95% CI] |
 |---|---|---|---|---|---|---|
 | YOLO11n @640 | 0.32 | 0.015 | 0.34 [0.26–0.42] | 0.77 | 0.34 | 0.48 [0.39–0.55] |
@@ -144,7 +147,7 @@ other animal classes, and the tracking filter.
 | YOLO11s @640 + tracking *(original settings)* | 0.34 | 0.145 | 0.31 [0.23–0.40] | 0.98 | 0.31 | 0.47 [0.38–0.56] |
 
 ![Precision-recall curves](figures/pr_curves.png)
-*Figure 3. Precision–recall on the test half for all setups.*
+*Figure 4. Precision–recall on the test half for all setups.*
 
 * **Model size matters more than input size.** Going from s to m adds 0.13 AP at 640 px.
   Going from 640 to 960 px adds little for m (0.57 to 0.58) but helps when combined with
@@ -183,17 +186,17 @@ labels, yellow are correct detections, red are false alarms, magenta are missed 
 dashed orange are hard (ignored) labels.
 
 ![Successes](figures/success.jpg)
-*Figure 4. Successes. (a) Camera3: six dogs, four of them tiny on the far road, found at
+*Figure 5. Successes. (a) Camera3: six dogs, four of them tiny on the far road, found at
 confidences as low as 0.02. (b) Camera1 at night: four dogs including a pile of puppies,
 in infrared. (c) Camera4 against the sun: dogs in plants and behind the bench.*
 
 ![False alarms](figures/false_alarms.jpg)
-*Figure 5. False alarms. (a) A pile of puppies gets an extra box spanning two of them.
+*Figure 6. False alarms. (a) A pile of puppies gets an extra box spanning two of them.
 (b) Part of the motorbike and rider is boxed at 0.02 confidence. (c) A dog lying in plants
 gets a second, shifted box.*
 
 ![Missed dogs](figures/misses.jpg)
-*Figure 6. Missed dogs. (a) Dark puppies at the back of Camera1's enclosure and a dog
+*Figure 7. Missed dogs. (a) Dark puppies at the back of Camera1's enclosure and a dog
 behind the fence mesh are missed; a loose box over a dog and the food tray counts as a
 false alarm. (b) A dog at the bowl at night, washed out by infrared glare. (c) A black dog
 cut off at the lens edge and pressed against other dogs.*
