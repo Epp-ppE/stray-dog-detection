@@ -91,7 +91,9 @@ data/  models/       large files, NOT committed (re-created by the scripts)
 
 ## Setup
 
-Python 3.10 or newer, `ffmpeg` on the PATH, about 10 GB of free disk. No GPU needed.
+Python 3.12 or newer (the pinned numpy and pandas need it), `ffmpeg` on the PATH, about
+10 GB of free disk. No GPU needed. Checking the evaluation alone (`cd src; python
+evaluate.py`) needs neither the footage nor `ffmpeg`: it uses the saved predictions.
 
 ```bash
 git clone https://github.com/Epp-ppE/stray-dog-detection.git
