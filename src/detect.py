@@ -1,6 +1,6 @@
 """Step 2: run a pretrained COCO detector on sampled frames of every unique clip.
 
-Detections are stored with a LOW confidence floor (0.05) so that thresholds can be
+Detections are stored with a LOW confidence floor (0.01) so that thresholds can be
 tuned later without re-running inference. Besides 'dog', other animal classes and
 'person' are kept to study confusions (e.g. a dog predicted as 'cat' or 'sheep').
 Boxes are normalised to [0, 1]. Per-frame colourfulness is stored to separate
@@ -15,7 +15,7 @@ from config import MANIFEST, MODELS, WORK, OUT, SAMPLE_FPS, INFER_WIDTH, ROOT
 from video import iter_frames
 
 KEEP = {0: "person", 15: "cat", 16: "dog", 17: "horse", 18: "sheep", 19: "cow", 21: "bear"}
-CONF_FLOOR = 0.05
+CONF_FLOOR = 0.01   # the best setup's dev-chosen threshold is ~0.02, so keep boxes down to 0.01
 BATCH = 8
 
 
@@ -31,6 +31,11 @@ def run(model_name, imgsz):
     model = YOLO(str(MODELS / f"{model_name}.pt"))
     man = pd.read_csv(MANIFEST)
     man = man[man.duplicate_of.isna()]
+    # clips that contain hand-labelled frames first, so tracker tuning can start early
+    ev = OUT / "eval" / "eval_frames.csv"
+    if ev.exists():
+        first = set(pd.read_csv(ev).video_id)
+        man = man.assign(_p=~man.video_id.isin(first)).sort_values(["_p", "video_id"]).drop(columns="_p")
     t0 = time.time()
     for k, r in enumerate(man.itertuples()):
         dpath, fpath = out_dir / f"{r.video_id}.csv", out_dir / f"{r.video_id}.frames.csv"

@@ -1,0 +1,677 @@
+{
+  "yolo11n_640": {
+    "threshold_from_dev": 0.015,
+    "dev_AP50": 0.319,
+    "dev_F1": 0.471,
+    "test_AP50": 0.343,
+    "test_AP50_CI95": [
+      0.264,
+      0.418
+    ],
+    "test_precision": 0.769,
+    "test_recall": 0.345,
+    "test_F1": 0.476,
+    "test_F1_CI95": [
+      0.392,
+      0.546
+    ],
+    "test_TP": 60,
+    "test_FP": 18,
+    "test_FN": 114,
+    "at_default_0_25": {
+      "precision": 0.9795918367346939,
+      "recall": 0.27586206896551724,
+      "f1": 0.430493273542601,
+      "tp": 48,
+      "fp": 1,
+      "fn": 126
+    },
+    "breakdown_all_frames": {
+      "camera=Camera1_LocationA": {
+        "frames": 70,
+        "dogs": 132,
+        "AP50": 0.344,
+        "precision": 0.81,
+        "recall": 0.356,
+        "FP": 11,
+        "FN": 85
+      },
+      "camera=Camera3_LocationC": {
+        "frames": 60,
+        "dogs": 121,
+        "AP50": 0.417,
+        "precision": 0.85,
+        "recall": 0.421,
+        "FP": 9,
+        "FN": 70
+      },
+      "camera=Camera4_LocationD": {
+        "frames": 50,
+        "dogs": 79,
+        "AP50": 0.177,
+        "precision": 0.609,
+        "recall": 0.177,
+        "FP": 9,
+        "FN": 65
+      },
+      "night=False": {
+        "frames": 145,
+        "dogs": 291,
+        "AP50": 0.345,
+        "precision": 0.792,
+        "recall": 0.354,
+        "FP": 27,
+        "FN": 188
+      },
+      "night=True": {
+        "frames": 35,
+        "dogs": 41,
+        "AP50": 0.237,
+        "precision": 0.818,
+        "recall": 0.22,
+        "FP": 2,
+        "FN": 32
+      }
+    }
+  },
+  "yolo11s_640": {
+    "threshold_from_dev": 0.023,
+    "dev_AP50": 0.497,
+    "dev_F1": 0.635,
+    "test_AP50": 0.439,
+    "test_AP50_CI95": [
+      0.358,
+      0.523
+    ],
+    "test_precision": 0.706,
+    "test_recall": 0.443,
+    "test_F1": 0.544,
+    "test_F1_CI95": [
+      0.468,
+      0.625
+    ],
+    "test_TP": 77,
+    "test_FP": 32,
+    "test_FN": 97,
+    "at_default_0_25": {
+      "precision": 0.953125,
+      "recall": 0.3505747126436782,
+      "f1": 0.5126050420168067,
+      "tp": 61,
+      "fp": 3,
+      "fn": 113
+    },
+    "breakdown_all_frames": {
+      "camera=Camera1_LocationA": {
+        "frames": 70,
+        "dogs": 132,
+        "AP50": 0.413,
+        "precision": 0.806,
+        "recall": 0.409,
+        "FP": 13,
+        "FN": 78
+      },
+      "camera=Camera3_LocationC": {
+        "frames": 60,
+        "dogs": 121,
+        "AP50": 0.603,
+        "precision": 0.892,
+        "recall": 0.612,
+        "FP": 9,
+        "FN": 47
+      },
+      "camera=Camera4_LocationD": {
+        "frames": 50,
+        "dogs": 79,
+        "AP50": 0.344,
+        "precision": 0.547,
+        "recall": 0.367,
+        "FP": 24,
+        "FN": 50
+      },
+      "night=False": {
+        "frames": 145,
+        "dogs": 291,
+        "AP50": 0.483,
+        "precision": 0.761,
+        "recall": 0.491,
+        "FP": 45,
+        "FN": 148
+      },
+      "night=True": {
+        "frames": 35,
+        "dogs": 41,
+        "AP50": 0.352,
+        "precision": 0.933,
+        "recall": 0.341,
+        "FP": 1,
+        "FN": 27
+      }
+    }
+  },
+  "yolo11m_640": {
+    "threshold_from_dev": 0.029,
+    "dev_AP50": 0.562,
+    "dev_F1": 0.7,
+    "test_AP50": 0.574,
+    "test_AP50_CI95": [
+      0.492,
+      0.651
+    ],
+    "test_precision": 0.907,
+    "test_recall": 0.563,
+    "test_F1": 0.695,
+    "test_F1_CI95": [
+      0.628,
+      0.756
+    ],
+    "test_TP": 98,
+    "test_FP": 10,
+    "test_FN": 76,
+    "at_default_0_25": {
+      "precision": 0.9880952380952381,
+      "recall": 0.47701149425287354,
+      "f1": 0.6434108527131783,
+      "tp": 83,
+      "fp": 1,
+      "fn": 91
+    },
+    "breakdown_all_frames": {
+      "camera=Camera1_LocationA": {
+        "frames": 70,
+        "dogs": 132,
+        "AP50": 0.524,
+        "precision": 0.909,
+        "recall": 0.53,
+        "FP": 7,
+        "FN": 62
+      },
+      "camera=Camera3_LocationC": {
+        "frames": 60,
+        "dogs": 121,
+        "AP50": 0.7,
+        "precision": 0.902,
+        "recall": 0.686,
+        "FP": 9,
+        "FN": 38
+      },
+      "camera=Camera4_LocationD": {
+        "frames": 50,
+        "dogs": 79,
+        "AP50": 0.439,
+        "precision": 0.921,
+        "recall": 0.443,
+        "FP": 3,
+        "FN": 44
+      },
+      "night=False": {
+        "frames": 145,
+        "dogs": 291,
+        "AP50": 0.577,
+        "precision": 0.898,
+        "recall": 0.574,
+        "FP": 19,
+        "FN": 124
+      },
+      "night=True": {
+        "frames": 35,
+        "dogs": 41,
+        "AP50": 0.512,
+        "precision": 1.0,
+        "recall": 0.512,
+        "FP": 0,
+        "FN": 20
+      }
+    }
+  },
+  "yolo11s_960": {
+    "threshold_from_dev": 0.043,
+    "dev_AP50": 0.562,
+    "dev_F1": 0.667,
+    "test_AP50": 0.476,
+    "test_AP50_CI95": [
+      0.399,
+      0.558
+    ],
+    "test_precision": 0.825,
+    "test_recall": 0.46,
+    "test_F1": 0.59,
+    "test_F1_CI95": [
+      0.516,
+      0.662
+    ],
+    "test_TP": 80,
+    "test_FP": 17,
+    "test_FN": 94,
+    "at_default_0_25": {
+      "precision": 0.9583333333333334,
+      "recall": 0.39655172413793105,
+      "f1": 0.5609756097560975,
+      "tp": 69,
+      "fp": 3,
+      "fn": 105
+    },
+    "breakdown_all_frames": {
+      "camera=Camera1_LocationA": {
+        "frames": 70,
+        "dogs": 132,
+        "AP50": 0.454,
+        "precision": 0.787,
+        "recall": 0.447,
+        "FP": 16,
+        "FN": 73
+      },
+      "camera=Camera3_LocationC": {
+        "frames": 60,
+        "dogs": 121,
+        "AP50": 0.677,
+        "precision": 0.872,
+        "recall": 0.678,
+        "FP": 12,
+        "FN": 39
+      },
+      "camera=Camera4_LocationD": {
+        "frames": 50,
+        "dogs": 79,
+        "AP50": 0.375,
+        "precision": 0.893,
+        "recall": 0.316,
+        "FP": 3,
+        "FN": 54
+      },
+      "night=False": {
+        "frames": 145,
+        "dogs": 291,
+        "AP50": 0.56,
+        "precision": 0.836,
+        "recall": 0.543,
+        "FP": 31,
+        "FN": 133
+      },
+      "night=True": {
+        "frames": 35,
+        "dogs": 41,
+        "AP50": 0.22,
+        "precision": 1.0,
+        "recall": 0.195,
+        "FP": 0,
+        "FN": 33
+      }
+    }
+  },
+  "yolo11m_960": {
+    "threshold_from_dev": 0.01,
+    "dev_AP50": 0.613,
+    "dev_F1": 0.731,
+    "test_AP50": 0.577,
+    "test_AP50_CI95": [
+      0.488,
+      0.667
+    ],
+    "test_precision": 0.843,
+    "test_recall": 0.586,
+    "test_F1": 0.692,
+    "test_F1_CI95": [
+      0.615,
+      0.76
+    ],
+    "test_TP": 102,
+    "test_FP": 19,
+    "test_FN": 72,
+    "at_default_0_25": {
+      "precision": 0.9880952380952381,
+      "recall": 0.47701149425287354,
+      "f1": 0.6434108527131783,
+      "tp": 83,
+      "fp": 1,
+      "fn": 91
+    },
+    "breakdown_all_frames": {
+      "camera=Camera1_LocationA": {
+        "frames": 70,
+        "dogs": 132,
+        "AP50": 0.529,
+        "precision": 0.847,
+        "recall": 0.545,
+        "FP": 13,
+        "FN": 60
+      },
+      "camera=Camera3_LocationC": {
+        "frames": 60,
+        "dogs": 121,
+        "AP50": 0.728,
+        "precision": 0.881,
+        "recall": 0.736,
+        "FP": 12,
+        "FN": 32
+      },
+      "camera=Camera4_LocationD": {
+        "frames": 50,
+        "dogs": 79,
+        "AP50": 0.497,
+        "precision": 0.833,
+        "recall": 0.506,
+        "FP": 8,
+        "FN": 39
+      },
+      "night=False": {
+        "frames": 145,
+        "dogs": 291,
+        "AP50": 0.619,
+        "precision": 0.848,
+        "recall": 0.632,
+        "FP": 33,
+        "FN": 107
+      },
+      "night=True": {
+        "frames": 35,
+        "dogs": 41,
+        "AP50": 0.415,
+        "precision": 1.0,
+        "recall": 0.415,
+        "FP": 0,
+        "FN": 24
+      }
+    }
+  },
+  "yolo11s_640+animals": {
+    "threshold_from_dev": 0.044,
+    "dev_AP50": 0.705,
+    "dev_F1": 0.772,
+    "test_AP50": 0.642,
+    "test_AP50_CI95": [
+      0.57,
+      0.711
+    ],
+    "test_precision": 0.77,
+    "test_recall": 0.615,
+    "test_F1": 0.684,
+    "test_F1_CI95": [
+      0.622,
+      0.744
+    ],
+    "test_TP": 107,
+    "test_FP": 32,
+    "test_FN": 67,
+    "at_default_0_25": {
+      "precision": 0.967032967032967,
+      "recall": 0.5057471264367817,
+      "f1": 0.6641509433962265,
+      "tp": 88,
+      "fp": 3,
+      "fn": 86
+    },
+    "breakdown_all_frames": {
+      "camera=Camera1_LocationA": {
+        "frames": 70,
+        "dogs": 132,
+        "AP50": 0.589,
+        "precision": 0.784,
+        "recall": 0.576,
+        "FP": 21,
+        "FN": 56
+      },
+      "camera=Camera3_LocationC": {
+        "frames": 60,
+        "dogs": 121,
+        "AP50": 0.792,
+        "precision": 0.94,
+        "recall": 0.777,
+        "FP": 6,
+        "FN": 27
+      },
+      "camera=Camera4_LocationD": {
+        "frames": 50,
+        "dogs": 79,
+        "AP50": 0.62,
+        "precision": 0.681,
+        "recall": 0.595,
+        "FP": 22,
+        "FN": 32
+      },
+      "night=False": {
+        "frames": 145,
+        "dogs": 291,
+        "AP50": 0.668,
+        "precision": 0.818,
+        "recall": 0.649,
+        "FP": 42,
+        "FN": 102
+      },
+      "night=True": {
+        "frames": 35,
+        "dogs": 41,
+        "AP50": 0.695,
+        "precision": 0.8,
+        "recall": 0.683,
+        "FP": 7,
+        "FN": 13
+      }
+    }
+  },
+  "yolo11m_640+animals": {
+    "threshold_from_dev": 0.025,
+    "dev_AP50": 0.752,
+    "dev_F1": 0.817,
+    "test_AP50": 0.693,
+    "test_AP50_CI95": [
+      0.62,
+      0.753
+    ],
+    "test_precision": 0.867,
+    "test_recall": 0.672,
+    "test_F1": 0.757,
+    "test_F1_CI95": [
+      0.7,
+      0.807
+    ],
+    "test_TP": 117,
+    "test_FP": 18,
+    "test_FN": 57,
+    "at_default_0_25": {
+      "precision": 0.9900990099009901,
+      "recall": 0.5747126436781609,
+      "f1": 0.7272727272727273,
+      "tp": 100,
+      "fp": 1,
+      "fn": 74
+    },
+    "breakdown_all_frames": {
+      "camera=Camera1_LocationA": {
+        "frames": 70,
+        "dogs": 132,
+        "AP50": 0.673,
+        "precision": 0.906,
+        "recall": 0.659,
+        "FP": 9,
+        "FN": 45
+      },
+      "camera=Camera3_LocationC": {
+        "frames": 60,
+        "dogs": 121,
+        "AP50": 0.813,
+        "precision": 0.897,
+        "recall": 0.793,
+        "FP": 11,
+        "FN": 25
+      },
+      "camera=Camera4_LocationD": {
+        "frames": 50,
+        "dogs": 79,
+        "AP50": 0.664,
+        "precision": 0.825,
+        "recall": 0.658,
+        "FP": 11,
+        "FN": 27
+      },
+      "night=False": {
+        "frames": 145,
+        "dogs": 291,
+        "AP50": 0.71,
+        "precision": 0.868,
+        "recall": 0.698,
+        "FP": 31,
+        "FN": 88
+      },
+      "night=True": {
+        "frames": 35,
+        "dogs": 41,
+        "AP50": 0.805,
+        "precision": 1.0,
+        "recall": 0.78,
+        "FP": 0,
+        "FN": 9
+      }
+    }
+  },
+  "yolo11m_960+animals": {
+    "threshold_from_dev": 0.017,
+    "dev_AP50": 0.785,
+    "dev_F1": 0.843,
+    "test_AP50": 0.75,
+    "test_AP50_CI95": [
+      0.672,
+      0.83
+    ],
+    "test_precision": 0.807,
+    "test_recall": 0.747,
+    "test_F1": 0.776,
+    "test_F1_CI95": [
+      0.714,
+      0.833
+    ],
+    "test_TP": 130,
+    "test_FP": 31,
+    "test_FN": 44,
+    "at_default_0_25": {
+      "precision": 0.9811320754716981,
+      "recall": 0.5977011494252874,
+      "f1": 0.7428571428571429,
+      "tp": 104,
+      "fp": 2,
+      "fn": 70
+    },
+    "breakdown_all_frames": {
+      "camera=Camera1_LocationA": {
+        "frames": 70,
+        "dogs": 132,
+        "AP50": 0.701,
+        "precision": 0.868,
+        "recall": 0.697,
+        "FP": 14,
+        "FN": 40
+      },
+      "camera=Camera3_LocationC": {
+        "frames": 60,
+        "dogs": 121,
+        "AP50": 0.821,
+        "precision": 0.863,
+        "recall": 0.835,
+        "FP": 16,
+        "FN": 20
+      },
+      "camera=Camera4_LocationD": {
+        "frames": 50,
+        "dogs": 79,
+        "AP50": 0.794,
+        "precision": 0.797,
+        "recall": 0.797,
+        "FP": 16,
+        "FN": 16
+      },
+      "night=False": {
+        "frames": 145,
+        "dogs": 291,
+        "AP50": 0.769,
+        "precision": 0.833,
+        "recall": 0.773,
+        "FP": 45,
+        "FN": 66
+      },
+      "night=True": {
+        "frames": 35,
+        "dogs": 41,
+        "AP50": 0.756,
+        "precision": 0.969,
+        "recall": 0.756,
+        "FP": 1,
+        "FN": 10
+      }
+    }
+  },
+  "yolo11s_640+tracking": {
+    "threshold_from_dev": 0.145,
+    "dev_AP50": 0.336,
+    "dev_F1": 0.502,
+    "test_AP50": 0.31,
+    "test_AP50_CI95": [
+      0.232,
+      0.395
+    ],
+    "test_precision": 0.982,
+    "test_recall": 0.31,
+    "test_F1": 0.472,
+    "test_F1_CI95": [
+      0.376,
+      0.565
+    ],
+    "test_TP": 54,
+    "test_FP": 1,
+    "test_FN": 120,
+    "at_default_0_25": {
+      "precision": 0.9811320754716981,
+      "recall": 0.2988505747126437,
+      "f1": 0.4581497797356828,
+      "tp": 52,
+      "fp": 1,
+      "fn": 122
+    },
+    "breakdown_all_frames": {
+      "camera=Camera1_LocationA": {
+        "frames": 70,
+        "dogs": 132,
+        "AP50": 0.277,
+        "precision": 0.947,
+        "recall": 0.273,
+        "FP": 2,
+        "FN": 96
+      },
+      "camera=Camera3_LocationC": {
+        "frames": 60,
+        "dogs": 121,
+        "AP50": 0.451,
+        "precision": 0.982,
+        "recall": 0.455,
+        "FP": 1,
+        "FN": 66
+      },
+      "camera=Camera4_LocationD": {
+        "frames": 50,
+        "dogs": 79,
+        "AP50": 0.205,
+        "precision": 0.944,
+        "recall": 0.215,
+        "FP": 1,
+        "FN": 62
+      },
+      "night=False": {
+        "frames": 145,
+        "dogs": 291,
+        "AP50": 0.343,
+        "precision": 0.962,
+        "recall": 0.347,
+        "FP": 4,
+        "FN": 190
+      },
+      "night=True": {
+        "frames": 35,
+        "dogs": 41,
+        "AP50": 0.171,
+        "precision": 1.0,
+        "recall": 0.171,
+        "FP": 0,
+        "FN": 34
+      }
+    }
+  }
+}

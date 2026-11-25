@@ -11,6 +11,9 @@ Protocol
 * AP@0.5 = all-point interpolated area under the precision-recall curve (VOC/COCO style)
 * the operating threshold is chosen on the DEV split (max F1) and then applied to TEST;
   all headline numbers are TEST numbers with 95% bootstrap intervals over frames
+* "+animals" setups count every COCO animal class as dog (puppies are often called
+  'cat'), with class-agnostic NMS so one animal is not counted twice
+* the pipeline's final setup is chosen by DEV AP50, never by test numbers
 * breakdowns by camera and day/night use all labelled frames (dev+test) for stability
   and are reported at each config's dev-chosen threshold
 
@@ -46,6 +49,21 @@ def predict(tag):
     df = pd.DataFrame(rows, columns=["frame_id", "cls", "conf", "x1", "y1", "x2", "y2"])
     df.to_csv(p, index=False)
     return df
+
+
+def merge_animals(P, iou_thr=0.6):
+    """Treat every animal class as 'dog' and drop duplicate boxes on the same animal
+    (class-agnostic non-maximum suppression: keep the most confident box)."""
+    P = P[P.cls.isin(ANIMALS)].sort_values("conf", ascending=False)
+    keep = []
+    for fid, g in P.groupby("frame_id", sort=False):
+        B = g[["x1", "y1", "x2", "y2"]].to_numpy(); alive = np.ones(len(g), bool)
+        for i in range(len(g)):
+            if not alive[i]:
+                continue
+            keep.append(g.index[i])
+            o = iou(B[i], B[i + 1:]); alive[i + 1:] &= o < iou_thr
+    return P.loc[keep].assign(cls="dog")
 
 
 def tracked_preds(det_tag):
@@ -154,7 +172,8 @@ def main(boot=1000):
     for tag in CONFIGS:
         P = predict(tag)
         variants[tag] = P[P.cls == "dog"]
-    variants["yolo11s_640+animals"] = predict("yolo11s_640").pipe(lambda P: P[P.cls.isin(ANIMALS)])
+    for tag in ["yolo11s_640", "yolo11m_640", "yolo11m_960"]:
+        variants[f"{tag}+animals"] = merge_animals(predict(tag))
     try:
         variants["yolo11s_640+tracking"] = tracked_preds("yolo11s_640")
     except FileNotFoundError:
@@ -164,11 +183,13 @@ def main(boot=1000):
     for name, P in variants.items():
         sd, td, nd = match(P, gt, dev)
         thr = best_threshold(sd, td, nd)
+        dev_ap = ap_and_curve(sd, td, nd)[0]
+        dev_f1 = at_threshold(sd, td, nd, thr)["f1"]
         st, tt, nt = match(P, gt, test)
         ap, s, prec, rec = ap_and_curve(st, tt, nt)
         m = at_threshold(st, tt, nt, thr)
         ci_ap, ci_f1 = bootstrap(P, gt, test, thr, boot) if boot else (None, None)
-        res[name] = dict(threshold_from_dev=thr, test_AP50=round(ap, 3), test_AP50_CI95=ci_ap,
+        res[name] = dict(threshold_from_dev=thr, dev_AP50=round(dev_ap, 3), dev_F1=round(dev_f1, 3), test_AP50=round(ap, 3), test_AP50_CI95=ci_ap,
                          test_precision=round(m["precision"], 3), test_recall=round(m["recall"], 3),
                          test_F1=round(m["f1"], 3), test_F1_CI95=ci_f1, test_TP=m["tp"], test_FP=m["fp"], test_FN=m["fn"],
                          at_default_0_25=at_threshold(st, tt, nt, 0.25))
@@ -183,7 +204,7 @@ def main(boot=1000):
                 br[f"{key}={val}"] = dict(frames=len(g), dogs=n2, AP50=round(a2, 3), precision=round(mm["precision"], 3),
                                           recall=round(mm["recall"], 3), FP=mm["fp"], FN=mm["fn"])
         res[name]["breakdown_all_frames"] = br
-        print(f"{name:24s} thr={thr:.3f}  AP50={ap:.3f} {ci_ap}  P={m['precision']:.3f} R={m['recall']:.3f} F1={m['f1']:.3f} {ci_f1}")
+        print(f"{name:24s} dev AP50={dev_ap:.3f} F1={dev_f1:.3f} | test thr={thr:.3f}  AP50={ap:.3f} {ci_ap}  P={m['precision']:.3f} R={m['recall']:.3f} F1={m['f1']:.3f} {ci_f1}")
     (EVAL / "metrics.json").write_text(json.dumps(res, indent=2, default=float))
 
     import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
