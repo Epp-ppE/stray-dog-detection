@@ -12,11 +12,12 @@ of 8 detector setups, a success and failure gallery, and a design (plus a small 
 
 | What | Where |
 |---|---|
-| Technical report | [`report/report.pdf`](report/report.pdf) (source: [`report/report.md`](report/report.md)) |
-| Presentation slides | [`slides/slides.pdf`](slides/slides.pdf), editable [`slides/slides.pptx`](slides/slides.pptx) |
-| Dog recognition design | Section 6 of the technical report (also as [`docs/recognition_design.md`](https://github.com/Epp-ppE/stray-dog-detection/blob/main/docs/recognition_design.md) in the GitHub repo) |
-| Code explained line by line | [`docs/code_walkthrough.pdf`](https://github.com/Epp-ppE/stray-dog-detection/blob/main/docs/code_walkthrough.pdf) (in the GitHub repo) |
-| Project brief (data findings) | [`docs/project_brief.pdf`](https://github.com/Epp-ppE/stray-dog-detection/blob/main/docs/project_brief.pdf) (in the GitHub repo) |
+| Technical report (includes the dog recognition design, section 6) | [`report/report.pdf`](report/report.pdf) |
+| Source code, setup and run instructions | this README, [`requirements.txt`](requirements.txt), [`src/`](src/), [`scripts/`](scripts/) |
+
+Extra material that is not part of the submission (presentation slides, report source, a
+line-by-line code walkthrough, a data brief) is in the GitHub repository:
+<https://github.com/Epp-ppE/stray-dog-detection>.
 
 ---
 
@@ -87,7 +88,7 @@ tools/
   label_tool.html      the browser page used for hand labelling
   import_labels.py     turns exported labels into outputs/eval/labels.json
 outputs/             small results, committed (manifest, tracks, stats, metrics, gallery)
-report/  slides/  docs/   the written deliverables
+report/report.pdf    the technical report
 data/  models/       large files, NOT committed (re-created by the scripts)
 ```
 
