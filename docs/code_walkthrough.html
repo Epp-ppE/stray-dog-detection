@@ -1,0 +1,682 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Code Walkthrough</title>
+<style>
+:root{--ink:#1c2420;--muted:#5b675f;--line:#d6ddd8;--soft:#f1f5f2;--code:#f6f7f5;--accent:#1f7a5a;--sans:"Inter","DejaVu Sans",sans-serif;--mono:"DejaVu Sans Mono",monospace}
+@page{size:A4;margin:14mm 13mm 16mm}
+body{margin:0;font-family:var(--sans);color:var(--ink);font-size:9.8pt;line-height:1.45;background:#fff}
+h1{font-size:22pt;margin:0 0 4pt;line-height:1.15}
+h2{font-size:13pt;margin:0 0 4pt;padding-top:6pt;border-top:1.2pt solid var(--ink);break-after:avoid}
+h2 .n{color:var(--accent);margin-right:7pt}
+h3{font-size:11pt;margin:12pt 0 4pt}
+.mono{font-family:var(--mono);font-size:.92em} .muted{color:var(--muted)}
+.lead{color:var(--muted);font-size:11pt;margin:0 0 10pt}
+.file{margin-top:16pt}
+.purpose{background:var(--soft);border-left:3pt solid var(--accent);padding:6pt 9pt;margin:4pt 0 9pt}
+.chunk{break-inside:avoid;margin:0 0 7pt;padding-bottom:6pt;border-bottom:.5pt solid var(--line)}
+pre{margin:0 0 3pt;background:var(--code);border-radius:2pt;padding:4pt 6pt;font-family:var(--mono);font-size:7.3pt;line-height:1.4;white-space:pre-wrap;word-break:break-all}
+.ln{display:inline-block;width:20pt;color:#9aa59f;user-select:none}
+.chunk p{margin:0}
+code{font-family:var(--mono);font-size:.88em;background:var(--code);padding:0 2pt;border-radius:2pt}
+table{border-collapse:collapse;width:100%;font-size:9pt;margin:4pt 0 10pt}
+td,th{text-align:left;vertical-align:top;padding:3pt 6pt;border-bottom:.5pt solid var(--line)}
+td:first-child{width:38%}
+ol li,ul li{margin-bottom:2pt}
+</style></head><body>
+<div class="kicker" style="font-size:8pt;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700">Stray dog detection · code walkthrough</div>
+<h1>What every part of the code does</h1>
+<p class="lead">Every pipeline file is shown in small groups of lines, each followed by a plain-English explanation. Grey numbers are line numbers, so you can find the same spot in the repository.</p>
+<h3>Order the files run in</h3>
+<ol>
+<li><span class="mono">scripts/download_data.sh</span>: download and unzip the footage</li>
+<li><span class="mono">train_clock_reader.py</span>, then <span class="mono">prepare.py</span>: real recording times, duplicates, the manifest</li>
+<li><span class="mono">detect.py</span>: YOLO on 3 frames per second (uses <span class="mono">video.py</span>)</li>
+<li><span class="mono">track.py</span>, then <span class="mono">stats.py</span>: tracks, visits, activity, charts</li>
+<li><span class="mono">select_eval_frames.py</span> → you label with <span class="mono">label_tool.html</span> → <span class="mono">evaluate.py</span>: accuracy</li>
+</ol>
+<p><span class="mono">config.py</span> (settings) and <span class="mono">clock_ocr.py</span> (the clock reader) are used by the others.</p>
+<h3>Python in 2 minutes</h3>
+<table><tr><td><code># ...</code> and <code>"""..."""</code></td><td>Comments and docstrings: notes for people. Python skips them.</td></tr><tr><td><code>import x</code>, <code>from x import y</code></td><td>Loads a library or another file of this project so its tools can be used.</td></tr><tr><td><code>name = value</code></td><td>Stores a value under a name (a variable). ALL_CAPS names are settings that don't change.</td></tr><tr><td><code>def f(a, b):</code></td><td>Defines a function: a named, reusable piece of code. <code>return</code> hands its answer back.</td></tr><tr><td><code>for x in items:</code></td><td>Repeats the indented lines once for each item.</td></tr><tr><td><code>if ... / elif ... / else:</code></td><td>Runs code only when a condition is true.</td></tr><tr><td><code>[a, b]</code>, <code>{key: value}</code>, <code>(a, b)</code></td><td>A list, a dictionary (look-up table) and a tuple (a fixed group of values).</td></tr><tr><td><code>f"{x} dogs"</code></td><td>Text with values filled in: if x is 3, this is "3 dogs".</td></tr><tr><td><code>np.array</code> / numpy</td><td>Fast arrays of numbers. An image is a 3-D array: height x width x 3 colours.</td></tr><tr><td><code>pd.DataFrame</code> / pandas</td><td>A table in memory, like a spreadsheet. <code>df.groupby("camera")</code> splits it into one group per camera; <code>df[df.x &gt; 0]</code> keeps rows where column x is above 0.</td></tr><tr><td><code>class Name:</code></td><td>A blueprint bundling data with the functions that use it (e.g. <code>ClockReader</code>).</td></tr><tr><td><code>with ...:</code></td><td>Opens something (a file, a worker pool) and closes it automatically at the end.</td></tr><tr><td><code>if __name__ == "__main__":</code></td><td>'Run this part only when the file is run directly', not when another file imports it.</td></tr></table>
+<h3>Files</h3><ul><li><span class="mono">src/config.py</span> <span class="muted">(13 lines)</span></li><li><span class="mono">src/video.py</span> <span class="muted">(26 lines)</span></li><li><span class="mono">scripts/download_data.sh</span> <span class="muted">(17 lines)</span></li><li><span class="mono">src/clock_ocr.py</span> <span class="muted">(106 lines)</span></li><li><span class="mono">src/train_clock_reader.py</span> <span class="muted">(57 lines)</span></li><li><span class="mono">src/prepare.py</span> <span class="muted">(85 lines)</span></li><li><span class="mono">src/detect.py</span> <span class="muted">(77 lines)</span></li><li><span class="mono">src/track.py</span> <span class="muted">(88 lines)</span></li><li><span class="mono">src/select_eval_frames.py</span> <span class="muted">(78 lines)</span></li><li><span class="mono">src/stats.py</span> <span class="muted">(147 lines)</span></li><li><span class="mono">src/evaluate.py</span> <span class="muted">(208 lines)</span></li><li><span class="mono">tools/label_tool.html</span> <span class="muted">(explained by block)</span></li></ul>
+<section class="file"><h2><span class="n">1</span><span class="mono">src/config.py</span></h2><p class="purpose">Settings shared by every other file: where folders are and a few numbers used everywhere. Changing a value here changes it for the whole pipeline.</p><div class="chunk"><pre><span class="ln">1</span>&quot;&quot;&quot;Shared paths and parameters for the stray-dog pipeline.&quot;&quot;&quot;</pre><p>A docstring: a description of the file for people. Python ignores it when running.</p></div><div class="chunk"><pre><span class="ln">2</span>from pathlib import Path</pre><p>Imports <code>Path</code>, a tool for building file paths that works the same on Windows, Mac and Linux.</p></div><div class="chunk"><pre><span class="ln">4</span>ROOT = Path(__file__).resolve().parents[1]</pre><p><code>ROOT</code> is the repository folder. <code>__file__</code> is this file's own location (<code>src/config.py</code>); <code>.resolve()</code> makes it a full path; <code>.parents[1]</code> goes up two levels, from the file to <code>src/</code> to the repository.</p></div><div class="chunk"><pre><span class="ln">5</span>RAW = ROOT / &quot;data&quot; / &quot;raw&quot;
+<span class="ln">6</span>OUT = ROOT / &quot;outputs&quot;            # small, reproducible results (committed)
+<span class="ln">7</span>WORK = ROOT / &quot;data&quot; / &quot;work&quot;     # large intermediates (ignored)
+<span class="ln">8</span>MODELS = ROOT / &quot;models&quot;
+<span class="ln">9</span>MANIFEST = OUT / &quot;manifest.csv&quot;</pre><p>Folder and file locations, built with <code>/</code>, which joins path pieces. <code>RAW</code>: the unzipped footage. <code>OUT</code>: small results that are committed to GitHub. <code>WORK</code>: big temporary files that are not committed. <code>MODELS</code>: model weight files. <code>MANIFEST</code>: the table with one row per video.</p></div><div class="chunk"><pre><span class="ln">11</span>TZ_HOURS = 7                       # Asia/Bangkok</pre><p>Thailand's time zone is UTC+7. Used when turning filename timestamps into local time.</p></div><div class="chunk"><pre><span class="ln">12</span>SAMPLE_FPS = 3                     # frames per second analysed per clip</pre><p>How many frames per second of video are analysed. 3 is a balance: enough to follow a walking dog, about 5x less work than all 15.</p></div><div class="chunk"><pre><span class="ln">13</span>INFER_WIDTH = 1280                 # frames are downscaled to 1280x720 before detection</pre><p>Frames are shrunk to 1280 pixels wide (1280x720) before detection. The originals are 2560x1440.</p></div></section><section class="file"><h2><span class="n">2</span><span class="mono">src/video.py</span></h2><p class="purpose">The frame sampler. Every step that needs video frames (detection, choosing evaluation frames) uses this one function, so frame number <i>i</i> always means exactly the same picture everywhere.</p><div class="chunk"><pre><span class="ln">1</span>&quot;&quot;&quot;Frame sampling: decode a clip at a fixed rate and downscale, via an ffmpeg pipe.
+<span class="ln">2</span> 
+<span class="ln">3</span>HEVC 2560x1440 is expensive to decode; ffmpeg&#x27;s fps filter drops frames before
+<span class="ln">4</span>scaling so only the kept frames are converted. Frame i has timestamp i / fps.
+<span class="ln">5</span>&quot;&quot;&quot;</pre><p>Docstring: decoding H.265 video at 2560x1440 is slow, so the program ffmpeg drops unwanted frames first and only shrinks the ones that are kept.</p></div><div class="chunk"><pre><span class="ln">6</span>import subprocess
+<span class="ln">7</span>import numpy as np</pre><p><code>subprocess</code> runs another program (ffmpeg) from Python. <code>numpy</code> handles arrays of numbers, which is how images are stored.</p></div><div class="chunk"><pre><span class="ln">10</span>def iter_frames(path, fps=3, width=1280, height=720):</pre><p>Defines the function <code>iter_frames</code>. It is a <i>generator</i>: instead of returning all frames at once (which would fill the memory), it hands them back one by one as the caller asks for them.</p></div><div class="chunk"><pre><span class="ln">11</span>    cmd = [&quot;ffmpeg&quot;, &quot;-v&quot;, &quot;quiet&quot;, &quot;-i&quot;, str(path), &quot;-an&quot;,
+<span class="ln">12</span>           &quot;-vf&quot;, f&quot;fps={fps},scale={width}:{height}:flags=area&quot;,
+<span class="ln">13</span>           &quot;-f&quot;, &quot;rawvideo&quot;, &quot;-pix_fmt&quot;, &quot;bgr24&quot;, &quot;-&quot;]</pre><p>Builds the ffmpeg command. <code>-v quiet</code>: no log messages. <code>-i</code>: the input video. <code>-an</code>: ignore the audio. <code>-vf</code>: video filters, first <code>fps=3</code> (keep 3 frames per second), then <code>scale</code> to 1280x720 using the 'area' method, which gives clean downscaling. <code>rawvideo</code> + <code>bgr24</code>: output plain pixel values, 3 bytes per pixel in Blue-Green-Red order (the order OpenCV expects). <code>-</code>: send the output to Python instead of a file.</p></div><div class="chunk"><pre><span class="ln">14</span>    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=10 ** 8)</pre><p>Starts ffmpeg and connects its output to a pipe Python can read from, with a large buffer for speed.</p></div><div class="chunk"><pre><span class="ln">15</span>    n = width * height * 3
+<span class="ln">16</span>    i = 0</pre><p><code>n</code> = the number of bytes in one frame (width x height x 3 colours). <code>i</code> counts frames from 0.</p></div><div class="chunk"><pre><span class="ln">17</span>    try:
+<span class="ln">18</span>        while True:
+<span class="ln">19</span>            buf = p.stdout.read(n)
+<span class="ln">20</span>            if len(buf) &lt; n:
+<span class="ln">21</span>                break
+<span class="ln">22</span>            yield i, i / fps, np.frombuffer(buf, np.uint8).reshape(height, width, 3)
+<span class="ln">23</span>            i += 1</pre><p>Loop: read exactly one frame's worth of bytes. If fewer bytes come back, the video has ended, so stop. Otherwise <code>yield</code> three things: the frame number, its time in seconds (<code>i / fps</code>, so frame 6 at 3 fps is 2.0 s) and the picture, reshaped from a flat list of bytes into a height x width x 3 image. Then move to the next frame number.</p></div><div class="chunk"><pre><span class="ln">24</span>    finally:
+<span class="ln">25</span>        p.stdout.close()
+<span class="ln">26</span>        p.wait()</pre><p><code>finally</code> always runs, even if the caller stops early: close the pipe and wait for ffmpeg to exit, so no stray processes are left behind.</p></div></section><section class="file"><h2><span class="n">3</span><span class="mono">scripts/download_data.sh</span></h2><p class="purpose">A shell script (runs in a terminal, not Python) that downloads the three zip files from the GitHub release <code>data-v1</code> and unzips them into <code>data/raw/</code>.</p><div class="chunk"><pre><span class="ln">1</span>#!/usr/bin/env bash
+<span class="ln">2</span># Download the raw footage from the GitHub release &quot;data-v1&quot; and unzip it into data/raw/&lt;camera&gt;/.
+<span class="ln">3</span># Uses the GitHub CLI if available, otherwise plain curl on the public release URLs.</pre><p>The first line says 'run this with bash'. Lines starting with <code>#</code> are comments.</p></div><div class="chunk"><pre><span class="ln">4</span>set -euo pipefail</pre><p>Safety settings: stop at the first error (<code>-e</code>), treat a misspelt variable as an error (<code>-u</code>), and fail if any step of a chained command fails (<code>pipefail</code>).</p></div><div class="chunk"><pre><span class="ln">5</span>REPO=&quot;${REPO:-Epp-ppE/stray-dog-detection}&quot;
+<span class="ln">6</span>TAG=&quot;data-v1&quot;
+<span class="ln">7</span>ASSETS=(Camera1_LocationA.zip Camera3_LocationC.zip Camera4_LocationD.zip)</pre><p>Settings: which repository (can be overridden from outside), the release name, and the list of zip files.</p></div><div class="chunk"><pre><span class="ln">8</span>mkdir -p data/zips data/raw
+<span class="ln">9</span>cd data/zips</pre><p>Creates the folders if missing and goes into the zips folder.</p></div><div class="chunk"><pre><span class="ln">10</span>for a in &quot;${ASSETS[@]}&quot;; do
+<span class="ln">11</span>  [ -s &quot;$a&quot; ] &amp;&amp; { echo &quot;have $a&quot;; continue; }
+<span class="ln">12</span>  if command -v gh &gt;/dev/null &amp;&amp; gh release download &quot;$TAG&quot; -R &quot;$REPO&quot; -p &quot;$a&quot; 2&gt;/dev/null; then :
+<span class="ln">13</span>  else curl -fL --retry 3 -o &quot;$a&quot; &quot;https://github.com/$REPO/releases/download/$TAG/$a&quot;; fi
+<span class="ln">14</span>done</pre><p>For each zip: if it is already downloaded and not empty (<code>-s</code>), skip it. Otherwise try the GitHub command-line tool <code>gh</code>; if that is not available or fails, download with <code>curl</code>: <code>-f</code> fail on server errors, <code>-L</code> follow redirects, <code>--retry 3</code> try again up to 3 times.</p></div><div class="chunk"><pre><span class="ln">15</span>cd ../..
+<span class="ln">16</span>for a in &quot;${ASSETS[@]}&quot;; do unzip -q -n &quot;data/zips/$a&quot; -d data/raw; done</pre><p>Back to the repository folder, then unzip each file into <code>data/raw</code>. <code>-q</code>: quiet. <code>-n</code>: never overwrite files that already exist.</p></div><div class="chunk"><pre><span class="ln">17</span>echo &quot;done: $(find data/raw -type f | wc -l) files in data/raw&quot;</pre><p>Prints how many files ended up in <code>data/raw</code>.</p></div></section><section class="file"><h2><span class="n">4</span><span class="mono">src/clock_ocr.py</span></h2><p class="purpose">Reads the date and time burned into the top-left of every frame. This was needed because Camera1's filenames are export times, not recording times. General text recognition (Tesseract) failed on bright backgrounds, so this file recognises each digit separately by its shape.</p><div class="chunk"><pre><span class="ln">1</span>&quot;&quot;&quot;Read the burned-in camera clock (e.g. &#x27;2025/01/07 06:22:29&#x27;, top-left of frame).
+<span class="ln">2</span> 
+<span class="ln">3</span>Why not plain Tesseract: the overlay is white text with a thin dark outline. On
+<span class="ln">4</span>bright daytime backgrounds the fill blends into the sky and Tesseract fails
+<span class="ln">5</span>(2/20 clips read in a test). The font, size and position are fixed, so instead each
+<span class="ln">6</span>of the 14 digit cells is cut out at a known position and classified by a small
+<span class="ln">7</span>k-NN on HOG features.
+<span class="ln">8</span> 
+<span class="ln">9</span>Training labels come for free: Camera3/Camera4 filenames are Unix-ms start times,
+<span class="ln">10</span>so the clock value of every frame in those clips is known (start + t + offset).
+<span class="ln">11</span>The trained reader is checked on held-out clips and then used for Camera1, whose
+<span class="ln">12</span>filenames are export times, not recording times.
+<span class="ln">13</span>&quot;&quot;&quot;</pre><p>Docstring explaining the reason for this approach, as above.</p></div><div class="chunk"><pre><span class="ln">14</span>import datetime as dt
+<span class="ln">15</span>import subprocess
+<span class="ln">16</span>import numpy as np
+<span class="ln">17</span>import cv2
+<span class="ln">18</span>from skimage.feature import hog</pre><p>Imports: <code>datetime</code> for dates and times, <code>subprocess</code> for ffmpeg, <code>numpy</code> for arrays, <code>cv2</code> (OpenCV) for image processing, and <code>hog</code> from scikit-image, a standard way to describe the shape of a small image.</p></div><div class="chunk"><pre><span class="ln">20</span>FULL_W, FULL_H = 2560, 1440</pre><p>The original video size, 2560x1440.</p></div><div class="chunk"><pre><span class="ln">21</span>CROP = (120, 40, 940, 120)            # x0, y0, x1, y1 in full-res pixels</pre><p>The rectangle (left, top, right, bottom) that contains the clock text, in original-size pixels.</p></div><div class="chunk"><pre><span class="ln">22</span># on-screen clock = floor(filename_start + t + CLOCK_LEAD) (measured on Cam3 night clips)
+<span class="ln">23</span>CLOCK_LEAD = 0.9</pre><p>Measured fact: the on-screen clock runs 0.9 seconds ahead of the time in Camera3/4 filenames.</p></div><div class="chunk"><pre><span class="ln">24</span>PITCH, X0, CELL_W, Y0, Y1 = 42, 128, 40, 48, 110</pre><p>The clock's fixed layout: characters are 42 pixels apart (<code>PITCH</code>), the first starts at x = 128, each digit is cut out 40 pixels wide, and the text spans y = 48 to 110.</p></div><div class="chunk"><pre><span class="ln">25</span>DIGIT_POS = [0, 1, 2, 3, 5, 6, 8, 9, 11, 12, 14, 15, 17, 18]   # YYYY MM DD HH MM SS</pre><p>Which of the 19 character positions in <code>2025/01/07 06:22:29</code> are digits: everything except the two slashes (positions 4 and 7), the space (10) and the two colons (13 and 16). That leaves 14 digits: YYYY MM DD HH MM SS.</p></div><div class="chunk"><pre><span class="ln">28</span>def read_clock_strip(path, every_n=15, fps=15, phase=0):
+<span class="ln">29</span>    &quot;&quot;&quot;Decode only the clock strip of every n-th frame. Returns (times_s, gray_strips).&quot;&quot;&quot;</pre><p>Function that decodes only the clock area, from every n-th frame of a clip.</p></div><div class="chunk"><pre><span class="ln">30</span>    x0, y0, x1, y1 = CROP
+<span class="ln">31</span>    w, h = x1 - x0, y1 - y0</pre><p>Unpacks the rectangle and works out its width and height.</p></div><div class="chunk"><pre><span class="ln">32</span>    cmd = [&quot;ffmpeg&quot;, &quot;-v&quot;, &quot;quiet&quot;, &quot;-i&quot;, str(path), &quot;-an&quot;,
+<span class="ln">33</span>           &quot;-vf&quot;, f&quot;select=&#x27;eq(mod(n\\,{every_n})\\,{phase})&#x27;,crop={w}:{h}:{x0}:{y0},format=gray&quot;,
+<span class="ln">34</span>           &quot;-fps_mode&quot;, &quot;passthrough&quot;, &quot;-f&quot;, &quot;rawvideo&quot;, &quot;-&quot;]</pre><p>ffmpeg command. <code>select=...</code> keeps only frames whose number divided by <code>every_n</code> leaves remainder <code>phase</code> (with 15 and 7: frames 7, 22, 37, ...). <code>crop</code> cuts out the clock strip, <code>format=gray</code> makes it black and white, and <code>passthrough</code> keeps the original frame timing.</p></div><div class="chunk"><pre><span class="ln">35</span>    raw = subprocess.run(cmd, capture_output=True).stdout
+<span class="ln">36</span>    strips = np.frombuffer(raw, np.uint8).reshape(-1, h, w)</pre><p>Runs ffmpeg, collects the raw bytes, and reshapes them into a stack of clock-strip images.</p></div><div class="chunk"><pre><span class="ln">37</span>    times = (np.arange(len(strips)) * every_n + phase) / fps
+<span class="ln">38</span>    return times, strips</pre><p>Works out each strip's time in seconds: (strip number x every_n + phase) / 15 fps. Returns the times and the strips.</p></div><div class="chunk"><pre><span class="ln">41</span>def cells(strip):
+<span class="ln">42</span>    &quot;&quot;&quot;Cut the 14 digit cells out of one clock strip -&gt; (14, feat) HOG features.&quot;&quot;&quot;</pre><p>Function that cuts the 14 digits out of one clock strip and describes each one's shape.</p></div><div class="chunk"><pre><span class="ln">43</span>    out = []
+<span class="ln">44</span>    for k in DIGIT_POS:
+<span class="ln">45</span>        xa = X0 + PITCH * k - CROP[0]
+<span class="ln">46</span>        c = strip[Y0 - CROP[1]:Y1 - CROP[1], xa:xa + CELL_W]</pre><p>For each digit position: its left edge inside the strip (<code>xa</code>), then slices that cell out, from y = 48 to 110.</p></div><div class="chunk"><pre><span class="ln">47</span>        c = cv2.resize(c, (32, 48), interpolation=cv2.INTER_AREA)
+<span class="ln">48</span>        c = cv2.equalizeHist(c)</pre><p>Resizes every cell to the same 32x48 size, then <i>equalises</i> its brightness: stretches the contrast so a digit on bright sky and a digit at night end up looking alike.</p></div><div class="chunk"><pre><span class="ln">49</span>        out.append(hog(c, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(2, 2)))
+<span class="ln">50</span>    return np.stack(out)</pre><p>HOG (Histogram of Oriented Gradients) describes the cell by the direction of its edges in small 8x8 patches, which captures the digit's shape and ignores colour and brightness. The 14 descriptions are stacked and returned.</p></div><div class="chunk"><pre><span class="ln">53</span>def digits_of(t: dt.datetime):
+<span class="ln">54</span>    return [int(ch) for ch in t.strftime(&quot;%Y%m%d%H%M%S&quot;)]</pre><p>Turns a date-time into its 14 digits. For example, 2025-01-07 06:22:29 becomes [2,0,2,5,0,1,0,7,0,6,2,2,2,9]. Used to make training labels.</p></div><div class="chunk"><pre><span class="ln">57</span>class ClockReader:
+<span class="ln">58</span>    def __init__(self, k=3):
+<span class="ln">59</span>        self.k = k
+<span class="ln">60</span>        self.X = self.y = None</pre><p>The digit reader, a <i>k-nearest-neighbours</i> classifier: to recognise a digit, find the k = 3 most similar digits it has seen before and let them vote. <code>X</code> stores the example shapes and <code>y</code> their correct digits.</p></div><div class="chunk"><pre><span class="ln">62</span>    def fit(self, X, y):
+<span class="ln">63</span>        self.X = X.astype(np.float32)
+<span class="ln">64</span>        self.X /= np.linalg.norm(self.X, axis=1, keepdims=True) + 1e-6
+<span class="ln">65</span>        self.y = np.asarray(y)
+<span class="ln">66</span>        return self</pre><p><code>fit</code> ('training'): for k-NN this just stores the examples. Each is scaled to length 1 so that comparing two of them measures shape similarity only.</p></div><div class="chunk"><pre><span class="ln">68</span>    def predict_digits(self, F):
+<span class="ln">69</span>        F = F.astype(np.float32)
+<span class="ln">70</span>        F /= np.linalg.norm(F, axis=1, keepdims=True) + 1e-6
+<span class="ln">71</span>        sim = F @ self.X.T
+<span class="ln">72</span>        idx = np.argsort(-sim, axis=1)[:, :self.k]
+<span class="ln">73</span>        votes = self.y[idx]
+<span class="ln">74</span>        return np.array([np.bincount(v, minlength=10).argmax() for v in votes])</pre><p><code>predict_digits</code>: scale the new cells the same way, compute their similarity to every stored example in one matrix multiplication (<code>@</code>), take the 3 most similar (<code>argsort</code>), and return the digit that wins the vote (<code>bincount(...).argmax()</code>).</p></div><div class="chunk"><pre><span class="ln">76</span>    def read(self, strip):
+<span class="ln">77</span>        d = &quot;&quot;.join(map(str, self.predict_digits(cells(strip))))
+<span class="ln">78</span>        try:
+<span class="ln">79</span>            return dt.datetime.strptime(d, &quot;%Y%m%d%H%M%S&quot;)
+<span class="ln">80</span>        except ValueError:
+<span class="ln">81</span>            return None</pre><p><code>read</code>: predicts the 14 digits, joins them into text like <code>20250107062229</code> and turns that into a date-time. If the result is impossible (for example month 13), it returns <code>None</code> instead of crashing.</p></div><div class="chunk"><pre><span class="ln">83</span>    def clip_start(self, path):
+<span class="ln">84</span>        &quot;&quot;&quot;Robust clip start: median over all sampled frames of (reading - t).&quot;&quot;&quot;
+<span class="ln">85</span>        times, strips = read_clock_strip(path, phase=7)
+<span class="ln">86</span>        starts = []
+<span class="ln">87</span>        for t, s in zip(times, strips):
+<span class="ln">88</span>            r = self.read(s)
+<span class="ln">89</span>            if r is not None:
+<span class="ln">90</span>                starts.append(r.timestamp() - t)
+<span class="ln">91</span>        if not starts:
+<span class="ln">92</span>            return None, 0, len(times)</pre><p><code>clip_start</code>: reads the clock in every 15th frame of a clip (frames 7, 22, 37, ..., i.e. half-way through each second). For each successful reading it subtracts that frame's time to get the implied clip start. If nothing could be read, it returns nothing.</p></div><div class="chunk"><pre><span class="ln">93</span>        # clock shows floor(true + lead); +0.5 recentres the 1 s quantisation, -lead removes the lead
+<span class="ln">94</span>        med = float(np.median(starts)) + 0.5 - CLOCK_LEAD
+<span class="ln">95</span>        agree = sum(abs(s - med) &lt;= 2 for s in starts)
+<span class="ln">96</span>        return dt.datetime.fromtimestamp(med), agree, len(times)</pre><p>Takes the <i>median</i> of all implied start times, so an occasional misread frame doesn't matter. Adds 0.5 s, because a clock showing whole seconds is on average half a second behind, and subtracts the 0.9 s lead. Also counts how many frames agree within 2 seconds, as a confidence check. Returns the start time, the agreeing count and the frame count.</p></div><div class="chunk"><pre><span class="ln">98</span>    def save(self, p):
+<span class="ln">99</span>        np.savez_compressed(p, X=self.X, y=self.y, k=self.k)
+<span class="ln">100</span> 
+<span class="ln">101</span>    @classmethod
+<span class="ln">102</span>    def load(cls, p):
+<span class="ln">103</span>        z = np.load(p)
+<span class="ln">104</span>        r = cls(int(z[&quot;k&quot;]))
+<span class="ln">105</span>        r.X, r.y = z[&quot;X&quot;], z[&quot;y&quot;]
+<span class="ln">106</span>        return r</pre><p><code>save</code> / <code>load</code>: store the trained reader in a compressed <code>.npz</code> file and read it back.</p></div></section><section class="file"><h2><span class="n">5</span><span class="mono">src/train_clock_reader.py</span></h2><p class="purpose">Trains the digit reader from <code>clock_ocr.py</code> and measures how accurate it is. The training labels are free: Camera3/4 filenames already give the true time of every frame.</p><div class="chunk"><pre><span class="ln">1</span>&quot;&quot;&quot;Train and validate the burned-in clock reader (see clock_ocr.py).
+<span class="ln">2</span> 
+<span class="ln">3</span>Labels: Camera3/Camera4 filenames are Unix-ms start times, so the on-screen clock of
+<span class="ln">4</span>a frame at time t is floor(start + t + CLOCK_LEAD). Frames are sampled at phase 7 of
+<span class="ln">5</span>every 15 (t = k + 0.47 s) so labels never sit on a second boundary.
+<span class="ln">6</span>Validation: 30% of clips held out (split by clip). Writes models/clock_knn.npz and
+<span class="ln">7</span>outputs/clock_reader_eval.json.
+<span class="ln">8</span>&quot;&quot;&quot;</pre><p>Docstring: how the labels are made and how accuracy is checked (30% of clips held back).</p></div><div class="chunk"><pre><span class="ln">9</span>import datetime as dt, json, random, re, csv
+<span class="ln">10</span>from concurrent.futures import ThreadPoolExecutor
+<span class="ln">11</span>import numpy as np
+<span class="ln">12</span>import clock_ocr as c
+<span class="ln">13</span>from config import RAW, MODELS, OUT, TZ_HOURS</pre><p>Imports. <code>ThreadPoolExecutor</code> runs 4 jobs at the same time to use all CPU cores. <code>import clock_ocr as c</code> gives that file the short name <code>c</code>.</p></div><div class="chunk"><pre><span class="ln">15</span>TZ = dt.timezone(dt.timedelta(hours=TZ_HOURS))</pre><p>A time-zone object for UTC+7.</p></div><div class="chunk"><pre><span class="ln">18</span>def load_clip(path):
+<span class="ln">19</span>    st = dt.datetime.fromtimestamp(int(path.stem[:13]) / 1000, TZ).replace(tzinfo=None)
+<span class="ln">20</span>    times, strips = c.read_clock_strip(path, every_n=15, phase=7)
+<span class="ln">21</span>    X = np.stack([c.cells(s) for s in strips])
+<span class="ln">22</span>    Y = np.array([c.digits_of(dt.datetime.fromtimestamp(int(st.timestamp() + t + c.CLOCK_LEAD))) for t in times])
+<span class="ln">23</span>    return path, st, X, Y</pre><p><code>load_clip</code>: the first 13 characters of a Camera3/4 filename are milliseconds since 1 January 1970, which gives the clip start; convert it to Thai local time. Then read clock strips at phase 7, describe the digits (<code>X</code>) and make the correct answers (<code>Y</code>): the digits of (start + frame time + 0.9 s lead), rounded down to whole seconds.</p></div><div class="chunk"><pre><span class="ln">26</span>def main():
+<span class="ln">27</span>    seen, clips = set(), []
+<span class="ln">28</span>    for p in sorted(RAW.glob(&quot;Camera[34]*/*.mp4&quot;)):
+<span class="ln">29</span>        if re.fullmatch(r&quot;\d{13}&quot;, p.stem):          # skip &#x27;(1)&#x27;, &#x27;(2)&#x27; and re-shared copies
+<span class="ln">30</span>            clips.append(p)</pre><p>Collects Camera3 and Camera4 videos whose name is exactly 13 digits. That skips the <code>(1)</code>/<code>(2)</code> duplicates and the re-shared file.</p></div><div class="chunk"><pre><span class="ln">31</span>    with ThreadPoolExecutor(4) as ex:
+<span class="ln">32</span>        D = list(ex.map(load_clip, clips))</pre><p>Loads all those clips, 4 at a time.</p></div><div class="chunk"><pre><span class="ln">33</span>    random.seed(1)
+<span class="ln">34</span>    idx = list(range(len(D))); random.shuffle(idx)
+<span class="ln">35</span>    test = set(idx[: len(idx) * 3 // 10])</pre><p>Fixed random seed, so the split is the same every run. Shuffles the clip order and sets aside the first 30% of clips as the <i>test</i> set. The split is by clip, so the test frames come from videos the reader never saw.</p></div><div class="chunk"><pre><span class="ln">36</span>    stack = lambda ids: (np.concatenate([D[i][2].reshape(-1, D[i][2].shape[-1]) for i in ids]),
+<span class="ln">37</span>                         np.concatenate([D[i][3].ravel() for i in ids]))</pre><p>A small helper that merges all digit cells and labels from a list of clips into one big table.</p></div><div class="chunk"><pre><span class="ln">38</span>    rd = c.ClockReader(3).fit(*stack([i for i in idx if i not in test]))</pre><p>Trains a reader on the other 70% of clips.</p></div><div class="chunk"><pre><span class="ln">39</span>    dig = []; full = []; start_err = []
+<span class="ln">40</span>    for i in test:
+<span class="ln">41</span>        path, st, X, Y = D[i]
+<span class="ln">42</span>        for x, y in zip(X, Y):
+<span class="ln">43</span>            p = rd.predict_digits(x); dig.append((p == y).mean()); full.append((p == y).all())
+<span class="ln">44</span>        s, _, _ = rd.clip_start(path)
+<span class="ln">45</span>        start_err.append(abs((s - st).total_seconds()) if s else float(&quot;inf&quot;))</pre><p>Tests it: for every test frame, the share of digits that are right and whether the whole timestamp is right; for every test clip, how far its computed start time is from the true filename time.</p></div><div class="chunk"><pre><span class="ln">46</span>    res = dict(train_clips=len(D) - len(test), test_clips=len(test), digit_acc=float(np.mean(dig)),
+<span class="ln">47</span>               frame_timestamp_acc=float(np.mean(full)), clip_start_abs_err_median_s=float(np.median(start_err)),
+<span class="ln">48</span>               clip_start_abs_err_max_s=float(np.max(start_err)),
+<span class="ln">49</span>               clips_within_1_5s=int(sum(e &lt;= 1.5 for e in start_err)))
+<span class="ln">50</span>    print(json.dumps(res, indent=2))
+<span class="ln">51</span>    OUT.mkdir(exist_ok=True); (OUT / &quot;clock_reader_eval.json&quot;).write_text(json.dumps(res, indent=2))</pre><p>Puts the results in a dictionary, prints them and saves them to <code>outputs/clock_reader_eval.json</code>. Result: 99.5% of digits right, every clip start within 0.13 s.</p></div><div class="chunk"><pre><span class="ln">52</span>    MODELS.mkdir(exist_ok=True)
+<span class="ln">53</span>    c.ClockReader(3).fit(*stack(idx)).save(MODELS / &quot;clock_knn.npz&quot;)</pre><p>Trains the final reader on <i>all</i> clips (more examples is better) and saves it to <code>models/clock_knn.npz</code>.</p></div><div class="chunk"><pre><span class="ln">56</span>if __name__ == &quot;__main__&quot;:
+<span class="ln">57</span>    main()</pre><p>Standard Python ending: run <code>main()</code> only when this file is run directly, not when another file imports it.</p></div></section><section class="file"><h2><span class="n">6</span><span class="mono">src/prepare.py</span></h2><p class="purpose">Step 1 of the pipeline. Builds <code>outputs/manifest.csv</code>, a table with one row per video file: its size and length, whether it is a duplicate, and its real recording start time.</p><div class="chunk"><pre><span class="ln">1</span>&quot;&quot;&quot;Step 1: build outputs/manifest.csv — one row per video file.
+<span class="ln">2</span> 
+<span class="ln">3</span>* probes each file (duration, fps, resolution, codecs)
+<span class="ln">4</span>* finds exact duplicates by MD5 (Camera4 &#x27;(1)&#x27;/&#x27;(2)&#x27; copies, a re-shared Camera3 file)
+<span class="ln">5</span>* assigns the real recording start time:
+<span class="ln">6</span>    - Camera3/Camera4: filename is Unix-ms start time (validated against the clock)
+<span class="ln">7</span>    - Camera1: filenames are export times, so the burned-in clock is read (clock_ocr)
+<span class="ln">8</span>&quot;&quot;&quot;</pre><p>Docstring summarising the three jobs of this file.</p></div><div class="chunk"><pre><span class="ln">9</span>import csv, datetime as dt, hashlib, json, re, subprocess, sys
+<span class="ln">10</span>from concurrent.futures import ThreadPoolExecutor
+<span class="ln">11</span>from config import RAW, MANIFEST, MODELS, TZ_HOURS
+<span class="ln">12</span>from clock_ocr import ClockReader
+<span class="ln">13</span> 
+<span class="ln">14</span>TZ = dt.timezone(dt.timedelta(hours=TZ_HOURS))</pre><p>Imports: <code>hashlib</code> for file fingerprints, <code>json</code>/<code>csv</code> for reading and writing data, <code>re</code> for text patterns, plus the clock reader and settings.</p></div><div class="chunk"><pre><span class="ln">17</span>def probe(path):
+<span class="ln">18</span>    j = json.loads(subprocess.run([&quot;ffprobe&quot;, &quot;-v&quot;, &quot;error&quot;, &quot;-print_format&quot;, &quot;json&quot;, &quot;-show_format&quot;,
+<span class="ln">19</span>                                   &quot;-show_streams&quot;, str(path)], capture_output=True, text=True).stdout)
+<span class="ln">20</span>    v = next(s for s in j[&quot;streams&quot;] if s[&quot;codec_type&quot;] == &quot;video&quot;)
+<span class="ln">21</span>    num, den = map(int, v[&quot;avg_frame_rate&quot;].split(&quot;/&quot;))
+<span class="ln">22</span>    return dict(duration_s=round(float(j[&quot;format&quot;][&quot;duration&quot;]), 3), fps=round(num / den, 3),
+<span class="ln">23</span>                width=v[&quot;width&quot;], height=v[&quot;height&quot;], codec=v[&quot;codec_name&quot;])</pre><p><code>probe</code>: runs <code>ffprobe</code> (ffmpeg's inspection tool), which reports a video's details as JSON. Finds the video stream and converts the frame rate from a fraction like <code>15/1</code> to a number. Returns duration, fps, width, height and codec.</p></div><div class="chunk"><pre><span class="ln">26</span>def md5(path):
+<span class="ln">27</span>    h = hashlib.md5()
+<span class="ln">28</span>    with open(path, &quot;rb&quot;) as f:
+<span class="ln">29</span>        for b in iter(lambda: f.read(1 &lt;&lt; 20), b&quot;&quot;):
+<span class="ln">30</span>            h.update(b)
+<span class="ln">31</span>    return h.hexdigest()</pre><p><code>md5</code>: reads the file in 1 MB pieces and feeds them into an MD5 fingerprint. Two files get the same fingerprint only if every byte is identical, which is how the 22 duplicates were found.</p></div><div class="chunk"><pre><span class="ln">34</span>def main():
+<span class="ln">35</span>    files = sorted(p for p in RAW.glob(&quot;*/*&quot;) if p.suffix.lower() == &quot;.mp4&quot;)
+<span class="ln">36</span>    print(f&quot;{len(files)} files&quot;)</pre><p>Lists every <code>.mp4</code> under <code>data/raw/</code>. <code>.lower()</code> also catches the one file ending in capital <code>.MP4</code>.</p></div><div class="chunk"><pre><span class="ln">37</span>    with ThreadPoolExecutor(4) as ex:
+<span class="ln">38</span>        info = list(ex.map(lambda p: {**probe(p), &quot;md5&quot;: md5(p)}, files))</pre><p>Inspects and fingerprints all 447 files, 4 at a time.</p></div><div class="chunk"><pre><span class="ln">39</span>    rows, first = [], {}
+<span class="ln">40</span>    for p, inf in zip(files, info):
+<span class="ln">41</span>        cam = p.parent.name
+<span class="ln">42</span>        vid = f&quot;{cam.split(&#x27;_&#x27;)[0].replace(&#x27;Camera&#x27;, &#x27;cam&#x27;)}_{p.stem}&quot;
+<span class="ln">43</span>        dup = first.setdefault(inf[&quot;md5&quot;], vid)
+<span class="ln">44</span>        rows.append(dict(video_id=vid, camera=cam, path=str(p.relative_to(RAW.parents[1])), **inf,
+<span class="ln">45</span>                         duplicate_of=&quot;&quot; if dup == vid else dup))</pre><p>Makes one row per file. The id is the camera short name plus the filename, e.g. <code>cam4_1736159931000(1)</code>. <code>first</code> remembers the first file seen with each fingerprint, so later files with the same fingerprint are marked as duplicates of it.</p></div><div class="chunk"><pre><span class="ln">46</span>    # prefer the cleanly named file as the canonical copy of a duplicate group
+<span class="ln">47</span>    groups = {}
+<span class="ln">48</span>    for r in rows:
+<span class="ln">49</span>        groups.setdefault(r[&quot;md5&quot;], []).append(r)
+<span class="ln">50</span>    for g in groups.values():
+<span class="ln">51</span>        g.sort(key=lambda r: (not re.fullmatch(r&quot;\d{13}&quot;, r[&quot;video_id&quot;].split(&quot;_&quot;, 1)[1]), r[&quot;video_id&quot;]))
+<span class="ln">52</span>        for r in g:
+<span class="ln">53</span>            r[&quot;duplicate_of&quot;] = &quot;&quot; if r is g[0] else g[0][&quot;video_id&quot;]</pre><p>Fixes which copy counts as the original: groups the rows by fingerprint and sorts each group so the cleanly named file (exactly 13 digits, no <code>(1)</code>) comes first. Every other file in the group is marked a duplicate of it.</p></div><div class="chunk"><pre><span class="ln">55</span>    reader = ClockReader.load(MODELS / &quot;clock_knn.npz&quot;)</pre><p>Loads the trained clock reader.</p></div><div class="chunk"><pre><span class="ln">57</span>    def start_time(r):
+<span class="ln">58</span>        stem = r[&quot;video_id&quot;].split(&quot;_&quot;, 1)[1]
+<span class="ln">59</span>        if r[&quot;duplicate_of&quot;]:
+<span class="ln">60</span>            return r
+<span class="ln">61</span>        m = re.match(r&quot;(\d{13})&quot;, stem)
+<span class="ln">62</span>        if m and not r[&quot;camera&quot;].startswith(&quot;Camera1&quot;):
+<span class="ln">63</span>            t = dt.datetime.fromtimestamp(int(m[1]) / 1000, TZ).replace(tzinfo=None)
+<span class="ln">64</span>            r.update(start_time=t.isoformat(sep=&quot; &quot;), start_source=&quot;filename&quot;)
+<span class="ln">65</span>        else:
+<span class="ln">66</span>            t, agree, n = reader.clip_start(RAW.parents[1] / r[&quot;path&quot;])
+<span class="ln">67</span>            r.update(start_time=t.replace(microsecond=0).isoformat(sep=&quot; &quot;) if t else &quot;&quot;,
+<span class="ln">68</span>                     start_source=f&quot;clock_ocr ({agree}/{n} frames agree)&quot;)
+<span class="ln">69</span>        return r</pre><p><code>start_time</code> for one row. Duplicates are skipped. Camera3/4 files with a 13-digit name get their time straight from the filename. Everything else (Camera1) gets it from the clock reader, which also records how many frames agreed, e.g. <code>clock_ocr (19/20 frames agree)</code>.</p></div><div class="chunk"><pre><span class="ln">71</span>    with ThreadPoolExecutor(4) as ex:
+<span class="ln">72</span>        rows = list(ex.map(start_time, rows))</pre><p>Works out start times for all rows, 4 at a time.</p></div><div class="chunk"><pre><span class="ln">73</span>    MANIFEST.parent.mkdir(parents=True, exist_ok=True)
+<span class="ln">74</span>    keys = [&quot;video_id&quot;, &quot;camera&quot;, &quot;path&quot;, &quot;start_time&quot;, &quot;start_source&quot;, &quot;duration_s&quot;, &quot;fps&quot;, &quot;width&quot;,
+<span class="ln">75</span>            &quot;height&quot;, &quot;codec&quot;, &quot;md5&quot;, &quot;duplicate_of&quot;]
+<span class="ln">76</span>    with open(MANIFEST, &quot;w&quot;, newline=&quot;&quot;) as f:
+<span class="ln">77</span>        w = csv.DictWriter(f, fieldnames=keys, extrasaction=&quot;ignore&quot;)
+<span class="ln">78</span>        w.writeheader()
+<span class="ln">79</span>        w.writerows(rows)</pre><p>Writes the manifest table to CSV with these columns, in this order.</p></div><div class="chunk"><pre><span class="ln">80</span>    u = [r for r in rows if not r[&quot;duplicate_of&quot;]]
+<span class="ln">81</span>    print(f&quot;wrote {MANIFEST}: {len(rows)} files, {len(u)} unique, {len(rows) - len(u)} duplicates&quot;)</pre><p>Prints a summary: 447 files, 425 unique, 22 duplicates.</p></div><div class="chunk"><pre><span class="ln">84</span>if __name__ == &quot;__main__&quot;:
+<span class="ln">85</span>    sys.exit(main())</pre><p>Runs <code>main()</code> when the file is run directly.</p></div></section><section class="file"><h2><span class="n">7</span><span class="mono">src/detect.py</span></h2><p class="purpose">Step 2. Runs the pretrained YOLO detector on 3 frames per second of every unique clip and saves every box it finds. This is the slow step: about 47 minutes for YOLO11s on this computer.</p><div class="chunk"><pre><span class="ln">1</span>&quot;&quot;&quot;Step 2: run a pretrained COCO detector on sampled frames of every unique clip.
+<span class="ln">2</span> 
+<span class="ln">3</span>Detections are stored with a LOW confidence floor (0.05) so that thresholds can be
+<span class="ln">4</span>tuned later without re-running inference. Besides &#x27;dog&#x27;, other animal classes and
+<span class="ln">5</span>&#x27;person&#x27; are kept to study confusions (e.g. a dog predicted as &#x27;cat&#x27; or &#x27;sheep&#x27;).
+<span class="ln">6</span>Boxes are normalised to [0, 1]. Per-frame colourfulness is stored to separate
+<span class="ln">7</span>infrared (grayscale) night frames from day frames.
+<span class="ln">8</span> 
+<span class="ln">9</span>usage: python detect.py --model yolo11s --imgsz 640
+<span class="ln">10</span>&quot;&quot;&quot;</pre><p>Docstring. Two key choices: boxes down to 5% confidence are kept, so the threshold can be tuned later without re-running the model, and other animals and people are kept to study mistakes such as puppies labelled 'cat'.</p></div><div class="chunk"><pre><span class="ln">11</span>import argparse, time
+<span class="ln">12</span>import numpy as np, pandas as pd
+<span class="ln">13</span>from ultralytics import YOLO
+<span class="ln">14</span>from config import MANIFEST, MODELS, WORK, OUT, SAMPLE_FPS, INFER_WIDTH, ROOT
+<span class="ln">15</span>from video import iter_frames</pre><p>Imports, including <code>YOLO</code> from the ultralytics library and the frame sampler.</p></div><div class="chunk"><pre><span class="ln">17</span>KEEP = {0: &quot;person&quot;, 15: &quot;cat&quot;, 16: &quot;dog&quot;, 17: &quot;horse&quot;, 18: &quot;sheep&quot;, 19: &quot;cow&quot;, 21: &quot;bear&quot;}</pre><p>COCO class numbers to keep: 0 person, 15 cat, 16 dog, 17 horse, 18 sheep, 19 cow, 21 bear. Everything else (cars, chairs, ...) is ignored.</p></div><div class="chunk"><pre><span class="ln">18</span>CONF_FLOOR = 0.05
+<span class="ln">19</span>BATCH = 8</pre><p>Keep boxes with confidence of at least 0.05. Process frames in batches of 8, which is faster than one at a time.</p></div><div class="chunk"><pre><span class="ln">22</span>def colourfulness(f):
+<span class="ln">23</span>    s = f[::8, ::8].astype(np.int16)
+<span class="ln">24</span>    return float((s.max(2) - s.min(2)).mean())</pre><p><code>colourfulness</code>: looks at every 8th pixel and measures how different its red, green and blue values are, then averages. Infrared night frames are grey (all three equal), so they score close to 0. This is how night frames are recognised.</p></div><div class="chunk"><pre><span class="ln">27</span>def run(model_name, imgsz):
+<span class="ln">28</span>    tag = f&quot;{model_name}_{imgsz}&quot;
+<span class="ln">29</span>    out_dir = WORK / &quot;det&quot; / tag
+<span class="ln">30</span>    out_dir.mkdir(parents=True, exist_ok=True)
+<span class="ln">31</span>    model = YOLO(str(MODELS / f&quot;{model_name}.pt&quot;))</pre><p><code>run</code>: makes a name like <code>yolo11s_640</code>, a folder for this model's results, and loads the model weights.</p></div><div class="chunk"><pre><span class="ln">32</span>    man = pd.read_csv(MANIFEST)
+<span class="ln">33</span>    man = man[man.duplicate_of.isna()]</pre><p>Reads the manifest and keeps only unique clips (rows with no <code>duplicate_of</code>).</p></div><div class="chunk"><pre><span class="ln">34</span>    t0 = time.time()
+<span class="ln">35</span>    for k, r in enumerate(man.itertuples()):
+<span class="ln">36</span>        dpath, fpath = out_dir / f&quot;{r.video_id}.csv&quot;, out_dir / f&quot;{r.video_id}.frames.csv&quot;
+<span class="ln">37</span>        if dpath.exists() and fpath.exists():
+<span class="ln">38</span>            continue</pre><p>Goes through the clips. If a clip's result files already exist, it is skipped, so an interrupted run can be restarted and continues where it stopped.</p></div><div class="chunk"><pre><span class="ln">39</span>        dets, frames, buf = [], [], []</pre><p>Empty lists for this clip's detections, frame information, and the current batch of frames.</p></div><div class="chunk"><pre><span class="ln">41</span>        def flush():
+<span class="ln">42</span>            res = model.predict([b[2] for b in buf], imgsz=imgsz, conf=CONF_FLOOR,
+<span class="ln">43</span>                                classes=list(KEEP), verbose=False)
+<span class="ln">44</span>            for (i, t, f), rr in zip(buf, res):
+<span class="ln">45</span>                b = rr.boxes
+<span class="ln">46</span>                xyxyn = b.xyxyn.numpy()
+<span class="ln">47</span>                for (x1, y1, x2, y2), c, s in zip(xyxyn, b.cls.numpy().astype(int), b.conf.numpy()):
+<span class="ln">48</span>                    dets.append((r.video_id, i, round(t, 3), KEEP[c], round(float(s), 4),
+<span class="ln">49</span>                                 round(float(x1), 5), round(float(y1), 5), round(float(x2), 5), round(float(y2), 5)))
+<span class="ln">50</span>            buf.clear()</pre><p><code>flush</code>: runs YOLO on the batch. <code>imgsz</code> is the size the model works at (640), <code>conf</code> the minimum confidence and <code>classes</code> the kept classes. For every frame and every box it records the clip, frame number, time, class name, confidence and the box corners as fractions of the image size (0 to 1, the <code>xyxyn</code> format), then empties the batch.</p></div><div class="chunk"><pre><span class="ln">52</span>        for i, t, f in iter_frames(ROOT / r.path, fps=SAMPLE_FPS, width=INFER_WIDTH, height=INFER_WIDTH * 9 // 16):
+<span class="ln">53</span>            frames.append((r.video_id, i, round(t, 3), round(colourfulness(f), 2)))
+<span class="ln">54</span>            buf.append((i, t, f))
+<span class="ln">55</span>            if len(buf) == BATCH:
+<span class="ln">56</span>                flush()
+<span class="ln">57</span>        if buf:
+<span class="ln">58</span>            flush()</pre><p>Reads the clip's frames through the sampler (3 fps, 1280x720). For each frame: record its colourfulness, add it to the batch, and run the model whenever 8 are waiting. After the last frame, run the model on any leftovers.</p></div><div class="chunk"><pre><span class="ln">59</span>        pd.DataFrame(dets, columns=[&quot;video_id&quot;, &quot;frame&quot;, &quot;t&quot;, &quot;cls&quot;, &quot;conf&quot;, &quot;x1&quot;, &quot;y1&quot;, &quot;x2&quot;, &quot;y2&quot;]).to_csv(dpath, index=False)
+<span class="ln">60</span>        pd.DataFrame(frames, columns=[&quot;video_id&quot;, &quot;frame&quot;, &quot;t&quot;, &quot;colourfulness&quot;]).to_csv(fpath, index=False)</pre><p>Saves this clip's detections and frame list as two small CSV files.</p></div><div class="chunk"><pre><span class="ln">61</span>        if k % 20 == 0:
+<span class="ln">62</span>            el = time.time() - t0
+<span class="ln">63</span>            print(f&quot;[{tag}] {k + 1}/{len(man)} clips, {el / 60:.1f} min&quot;, flush=True)</pre><p>Prints progress every 20 clips.</p></div><div class="chunk"><pre><span class="ln">64</span>    # gather
+<span class="ln">65</span>    D = pd.concat([pd.read_csv(p) for p in sorted(out_dir.glob(&quot;*[!s].csv&quot;)) if not p.name.endswith(&quot;.frames.csv&quot;)])
+<span class="ln">66</span>    F = pd.concat([pd.read_csv(p) for p in sorted(out_dir.glob(&quot;*.frames.csv&quot;))])
+<span class="ln">67</span>    D.to_csv(WORK / f&quot;detections_{tag}.csv.gz&quot;, index=False)
+<span class="ln">68</span>    F.to_csv(OUT / &quot;frames.csv.gz&quot;, index=False)
+<span class="ln">69</span>    print(f&quot;[{tag}] done: {len(F)} frames, {len(D)} raw detections, {(time.time() - t0) / 60:.1f} min&quot;)</pre><p>After all clips: combines the per-clip files into one compressed detections file (<code>data/work/</code>) and one frames file (<code>outputs/frames.csv.gz</code>), then prints totals. The pattern <code>*[!s].csv</code> plus the extra check skip the <code>.frames.csv</code> files when gathering detections.</p></div><div class="chunk"><pre><span class="ln">72</span>if __name__ == &quot;__main__&quot;:
+<span class="ln">73</span>    ap = argparse.ArgumentParser()
+<span class="ln">74</span>    ap.add_argument(&quot;--model&quot;, default=&quot;yolo11s&quot;)
+<span class="ln">75</span>    ap.add_argument(&quot;--imgsz&quot;, type=int, default=640)
+<span class="ln">76</span>    a = ap.parse_args()
+<span class="ln">77</span>    run(a.model, a.imgsz)</pre><p>Command-line options, so you can run e.g. <code>python detect.py --model yolo11m --imgsz 960</code>.</p></div></section><section class="file"><h2><span class="n">8</span><span class="mono">src/track.py</span></h2><p class="purpose">Step 3. Links the boxes of one dog across frames into a <i>track</i> using ByteTrack, then keeps only tracks that look like real dogs. Takes about 20 seconds because it works on the saved detections and doesn't run the detector again.</p><div class="chunk"><pre><span class="ln">1</span>&quot;&quot;&quot;Step 3: link per-frame dog detections into tracks with ByteTrack.
+<span class="ln">2</span> 
+<span class="ln">3</span>Runs offline on the stored detections (detect.py), so detector thresholds and tracker
+<span class="ln">4</span>settings can be changed without re-running the CNN. Each clip is tracked on its own
+<span class="ln">5</span>(clips are separate motion-triggered recordings). A track is kept as a confirmed dog
+<span class="ln">6</span>when it lasts &gt;= MIN_TRACK_FRAMES and its best score &gt;= MIN_TRACK_PEAK; this removes
+<span class="ln">7</span>one-frame flickers, which are the most common false positives.
+<span class="ln">8</span> 
+<span class="ln">9</span>usage: python track.py --det yolo11s_640
+<span class="ln">10</span>&quot;&quot;&quot;</pre><p>Docstring: why tracks are filtered (one-frame flickers are the most common false alarm).</p></div><div class="chunk"><pre><span class="ln">11</span>import argparse
+<span class="ln">12</span>from types import SimpleNamespace
+<span class="ln">13</span>import numpy as np, pandas as pd
+<span class="ln">14</span>from ultralytics.trackers.byte_tracker import BYTETracker
+<span class="ln">15</span>from config import WORK, OUT, SAMPLE_FPS, INFER_WIDTH</pre><p>Imports. <code>BYTETracker</code> is the ByteTrack implementation inside ultralytics. <code>SimpleNamespace</code> is a quick way to bundle settings into one object.</p></div><div class="chunk"><pre><span class="ln">17</span>W, H = INFER_WIDTH, INFER_WIDTH * 9 // 16</pre><p>Frame size in pixels: 1280 x 720.</p></div><div class="chunk"><pre><span class="ln">18</span>TRACKER = dict(track_high_thresh=0.35, track_low_thresh=0.10, new_track_thresh=0.40,
+<span class="ln">19</span>               track_buffer=int(4 * SAMPLE_FPS),    # keep a lost dog for 4 s (occlusion by fence/plants)
+<span class="ln">20</span>               match_thresh=0.8, fuse_score=True)</pre><p>Tracker settings. Boxes with confidence at least 0.35 are matched to tracks first; boxes between 0.10 and 0.35 are used in a second pass only to keep existing tracks alive (ByteTrack's key idea: a dog that briefly looks unclear isn't lost). A new track needs at least 0.40. A lost track is remembered for 12 frames (4 seconds), to survive a dog passing behind the fence or plants. <code>match_thresh</code> limits how badly a box may overlap a track's predicted position and still be matched. <code>fuse_score</code> also takes confidence into account when matching.</p></div><div class="chunk"><pre><span class="ln">21</span>MIN_TRACK_FRAMES = 3                                 # &gt;= 1 s at 3 fps
+<span class="ln">22</span>MIN_TRACK_PEAK = 0.45</pre><p>A track counts as a confirmed dog only if it lasts at least 3 frames (1 second) and was at least 0.45 confident at some point.</p></div><div class="chunk"><pre><span class="ln">23</span>DOG_LIKE = {&quot;dog&quot;}                                   # see --merge-animals</pre><p>Which classes count as 'dog' (just dog, unless <code>--merge-animals</code> is used).</p></div><div class="chunk"><pre><span class="ln">26</span>class Dets:
+<span class="ln">27</span>    &quot;&quot;&quot;Minimal Results-like container for BYTETracker (conf, cls, xywh, boolean indexing).&quot;&quot;&quot;
+<span class="ln">28</span>    def __init__(self, xyxy, conf, cls):
+<span class="ln">29</span>        self.xyxy, self.conf, self.cls = xyxy, conf, cls
+<span class="ln">30</span> 
+<span class="ln">31</span>    @property
+<span class="ln">32</span>    def xywh(self):
+<span class="ln">33</span>        x1, y1, x2, y2 = self.xyxy.T
+<span class="ln">34</span>        return np.stack([(x1 + x2) / 2, (y1 + y2) / 2, x2 - x1, y2 - y1], 1)
+<span class="ln">35</span> 
+<span class="ln">36</span>    def __len__(self):
+<span class="ln">37</span>        return len(self.conf)
+<span class="ln">38</span> 
+<span class="ln">39</span>    def __getitem__(self, m):
+<span class="ln">40</span>        return Dets(self.xyxy[m], self.conf[m], self.cls[m])</pre><p><code>Dets</code>: a small adapter that gives BYTETracker data in the shape it expects. It holds boxes, confidences and classes, can report boxes as centre-x, centre-y, width, height (<code>xywh</code>), can say how many boxes it has, and can return a subset chosen by a True/False list.</p></div><div class="chunk"><pre><span class="ln">43</span>def track_video(dets, n_frames):
+<span class="ln">44</span>    trk = BYTETracker(SimpleNamespace(**TRACKER, tracker_type=&quot;bytetrack&quot;))
+<span class="ln">45</span>    by_f = {f: g for f, g in dets.groupby(&quot;frame&quot;)}
+<span class="ln">46</span>    rows = []</pre><p><code>track_video</code>: a fresh tracker for each clip, so track numbers restart in every video. Groups the clip's detections by frame number.</p></div><div class="chunk"><pre><span class="ln">47</span>    for f in range(n_frames):
+<span class="ln">48</span>        g = by_f.get(f)
+<span class="ln">49</span>        if g is None:
+<span class="ln">50</span>            d = Dets(np.zeros((0, 4), np.float32), np.zeros(0, np.float32), np.zeros(0, np.float32))
+<span class="ln">51</span>        else:
+<span class="ln">52</span>            xyxy = g[[&quot;x1&quot;, &quot;y1&quot;, &quot;x2&quot;, &quot;y2&quot;]].to_numpy(np.float32) * [W, H, W, H]
+<span class="ln">53</span>            d = Dets(xyxy, g.conf.to_numpy(np.float32), np.zeros(len(g), np.float32))</pre><p>Goes through <i>every</i> frame number, including frames with no detections, because the tracker must see empty frames to count how long a dog has been missing. Converts boxes from fractions back to pixels.</p></div><div class="chunk"><pre><span class="ln">54</span>        for x1, y1, x2, y2, tid, s, _c, _i in trk.update(d):
+<span class="ln">55</span>            rows.append((f, int(tid), x1 / W, y1 / H, x2 / W, y2 / H, float(s)))
+<span class="ln">56</span>    return pd.DataFrame(rows, columns=[&quot;frame&quot;, &quot;track_id&quot;, &quot;x1&quot;, &quot;y1&quot;, &quot;x2&quot;, &quot;y2&quot;, &quot;score&quot;])</pre><p>Updates the tracker with this frame's boxes. It returns the tracks currently visible, each with a box, a track id and a score, which are stored as fractions again. Returns a table.</p></div><div class="chunk"><pre><span class="ln">59</span>def main(det_tag, merge_animals=False):
+<span class="ln">60</span>    D = pd.read_csv(WORK / f&quot;detections_{det_tag}.csv.gz&quot;)
+<span class="ln">61</span>    F = pd.read_csv(OUT / &quot;frames.csv.gz&quot;)
+<span class="ln">62</span>    cls = DOG_LIKE | ({&quot;cat&quot;, &quot;sheep&quot;, &quot;cow&quot;, &quot;bear&quot;, &quot;horse&quot;} if merge_animals else set())
+<span class="ln">63</span>    D = D[D.cls.isin(cls)]
+<span class="ln">64</span>    nf = F.groupby(&quot;video_id&quot;).frame.max() + 1</pre><p><code>main</code>: loads all detections and the frame list, keeps only dog boxes (or dog plus other animals), and finds how many frames each clip has.</p></div><div class="chunk"><pre><span class="ln">65</span>    out = []
+<span class="ln">66</span>    for vid, n in nf.items():
+<span class="ln">67</span>        t = track_video(D[D.video_id == vid], int(n))
+<span class="ln">68</span>        if len(t):
+<span class="ln">69</span>            t.insert(0, &quot;video_id&quot;, vid)
+<span class="ln">70</span>            out.append(t)</pre><p>Tracks each clip separately and labels the results with the clip id.</p></div><div class="chunk"><pre><span class="ln">71</span>    T = pd.concat(out, ignore_index=True)
+<span class="ln">72</span>    T[&quot;t&quot;] = (T.frame / SAMPLE_FPS).round(3)
+<span class="ln">73</span>    T[&quot;uid&quot;] = T.video_id + &quot;:&quot; + T.track_id.astype(str)</pre><p>Combines all clips into one table, adds each row's time in seconds, and gives each track a unique name such as <code>cam3_1736153024000:14</code>.</p></div><div class="chunk"><pre><span class="ln">74</span>    agg = T.groupby(&quot;uid&quot;).agg(n=(&quot;frame&quot;, &quot;size&quot;), peak=(&quot;score&quot;, &quot;max&quot;))
+<span class="ln">75</span>    good = agg[(agg.n &gt;= MIN_TRACK_FRAMES) &amp; (agg.peak &gt;= MIN_TRACK_PEAK)].index
+<span class="ln">76</span>    T[&quot;confirmed&quot;] = T.uid.isin(good)</pre><p>For each track: how many frames long it is and its best score. Tracks passing both rules (at least 3 frames, best at least 0.45) are marked <code>confirmed</code>.</p></div><div class="chunk"><pre><span class="ln">77</span>    tag = det_tag + (&quot;_animals&quot; if merge_animals else &quot;&quot;)
+<span class="ln">78</span>    T.to_csv(OUT / f&quot;tracks_{tag}.csv.gz&quot;, index=False)
+<span class="ln">79</span>    print(f&quot;[{tag}] {T.uid.nunique()} raw tracks, {len(good)} confirmed, &quot;
+<span class="ln">80</span>          f&quot;in {T[T.confirmed].video_id.nunique()} of {len(nf)} clips&quot;)</pre><p>Saves all tracks to <code>outputs/tracks_yolo11s_640.csv.gz</code> and prints e.g. '900 raw tracks, 758 confirmed, in 351 of 425 clips'.</p></div><div class="chunk"><pre><span class="ln">83</span>if __name__ == &quot;__main__&quot;:
+<span class="ln">84</span>    ap = argparse.ArgumentParser()
+<span class="ln">85</span>    ap.add_argument(&quot;--det&quot;, default=&quot;yolo11s_640&quot;)
+<span class="ln">86</span>    ap.add_argument(&quot;--merge-animals&quot;, action=&quot;store_true&quot;)
+<span class="ln">87</span>    a = ap.parse_args()
+<span class="ln">88</span>    main(a.det, a.merge_animals)</pre><p>Command-line options.</p></div></section><section class="file"><h2><span class="n">9</span><span class="mono">src/select_eval_frames.py</span></h2><p class="purpose">Picks the 180 frames you labelled, at random and <i>before</i> looking at any model output, so the test can't be tilted towards easy frames. Then saves those frames as images.</p><div class="chunk"><pre><span class="ln">1</span>&quot;&quot;&quot;Choose the hand-labelled evaluation frames — at random, BEFORE looking at detections.
+<span class="ln">2</span> 
+<span class="ln">3</span>Stratified by camera x day/night (infrared). Frames are spread over many clips (a cap
+<span class="ln">4</span>per clip) and spaced &gt;= 3 s apart within a clip, because neighbouring frames are
+<span class="ln">5</span>near-duplicates. Each clip is assigned wholly to &#x27;dev&#x27; (used to choose thresholds)
+<span class="ln">6</span>or &#x27;test&#x27; (used only for the reported numbers), so no clip appears in both.
+<span class="ln">7</span> 
+<span class="ln">8</span>Images are produced by the SAME sampler as detection (video.iter_frames at
+<span class="ln">9</span>SAMPLE_FPS, 1280x720), so frame i here is pixel-identical to frame i in detect.py.
+<span class="ln">10</span>&quot;&quot;&quot;</pre><p>Docstring: how frames are chosen and why the images match the detector's input exactly.</p></div><div class="chunk"><pre><span class="ln">11</span>import random, json
+<span class="ln">12</span>import numpy as np, pandas as pd, cv2
+<span class="ln">13</span>from config import MANIFEST, OUT, WORK, ROOT, SAMPLE_FPS, INFER_WIDTH, RAW
+<span class="ln">14</span>from video import iter_frames</pre><p>Imports.</p></div><div class="chunk"><pre><span class="ln">16</span>SEED = 2026</pre><p>A fixed random seed: running the script again picks exactly the same 180 frames.</p></div><div class="chunk"><pre><span class="ln">17</span># (camera, is_night): (n_frames, max per clip)
+<span class="ln">18</span>PLAN = {(&quot;Camera1_LocationA&quot;, False): (50, 2), (&quot;Camera1_LocationA&quot;, True): (20, 2),
+<span class="ln">19</span>        (&quot;Camera3_LocationC&quot;, False): (45, 2), (&quot;Camera3_LocationC&quot;, True): (15, 3),
+<span class="ln">20</span>        (&quot;Camera4_LocationD&quot;, False): (50, 6)}</pre><p>The plan: for each camera and day/night group, how many frames to pick and the most allowed from a single clip. Camera1: 50 day + 20 night. Camera3: 45 day + 15 night. Camera4: 50 day (it has no night clips).</p></div><div class="chunk"><pre><span class="ln">21</span>MIN_GAP_S = 3.0</pre><p>Frames from the same clip must be at least 3 seconds apart, because neighbouring frames are near-copies.</p></div><div class="chunk"><pre><span class="ln">24</span>def clip_is_night(path):
+<span class="ln">25</span>    &quot;&quot;&quot;Infrared clips are grayscale: mean channel spread of a middle frame &lt; 4.&quot;&quot;&quot;
+<span class="ln">26</span>    for i, t, f in iter_frames(path, fps=0.5, width=320, height=180):
+<span class="ln">27</span>        s = f.astype(np.int16)
+<span class="ln">28</span>        return float((s.max(2) - s.min(2)).mean()) &lt; 4
+<span class="ln">29</span>    return False</pre><p><code>clip_is_night</code>: decodes a small 320x180 version of the clip's first sampled frame and checks whether it is grey (colour spread under 4), i.e. infrared.</p></div><div class="chunk"><pre><span class="ln">32</span>def main():
+<span class="ln">33</span>    rng = random.Random(SEED)
+<span class="ln">34</span>    man = pd.read_csv(MANIFEST)
+<span class="ln">35</span>    man = man[man.duplicate_of.isna()].copy()
+<span class="ln">36</span>    man[&quot;night&quot;] = [clip_is_night(ROOT / p) for p in man.path]</pre><p>Loads the unique clips and marks each as day or night. This decodes every clip, so it is the slow part.</p></div><div class="chunk"><pre><span class="ln">37</span>    picks = []
+<span class="ln">38</span>    for (cam, night), (n, cap) in PLAN.items():
+<span class="ln">39</span>        clips = man[(man.camera == cam) &amp; (man.night == night)].video_id.tolist()
+<span class="ln">40</span>        rng.shuffle(clips)
+<span class="ln">41</span>        half = set(clips[: len(clips) // 2])                  # dev / test split by clip</pre><p>For each group: lists its clips, shuffles them, and puts the first half in <i>dev</i> and the rest in <i>test</i>. Every frame of a clip therefore lands on the same side.</p></div><div class="chunk"><pre><span class="ln">42</span>        taken = {}
+<span class="ln">43</span>        attempts = 0
+<span class="ln">44</span>        while sum(len(v) for v in taken.values()) &lt; n and attempts &lt; 20000:
+<span class="ln">45</span>            attempts += 1
+<span class="ln">46</span>            vid = rng.choice(clips)
+<span class="ln">47</span>            if len(taken.get(vid, [])) &gt;= cap:
+<span class="ln">48</span>                continue
+<span class="ln">49</span>            dur = float(man.loc[man.video_id == vid, &quot;duration_s&quot;].iloc[0])
+<span class="ln">50</span>            i = rng.randrange(0, max(1, int(dur * SAMPLE_FPS) - 1))
+<span class="ln">51</span>            if any(abs(i - j) / SAMPLE_FPS &lt; MIN_GAP_S for j in taken.get(vid, [])):
+<span class="ln">52</span>                continue
+<span class="ln">53</span>            taken.setdefault(vid, []).append(i)</pre><p>The random picking loop: choose a random clip; skip it if it has reached its limit; choose a random frame within it; skip it if it is within 3 seconds of a frame already chosen from that clip; otherwise keep it. Repeat until the group has enough frames (with a safety stop after 20,000 tries).</p></div><div class="chunk"><pre><span class="ln">54</span>        for vid, idx in taken.items():
+<span class="ln">55</span>            for i in idx:
+<span class="ln">56</span>                picks.append(dict(frame_id=f&quot;{vid}__{i:04d}&quot;, video_id=vid, frame=i, t=round(i / SAMPLE_FPS, 3),
+<span class="ln">57</span>                                  camera=cam, night=night, split=&quot;dev&quot; if vid in half else &quot;test&quot;))</pre><p>Makes one row per chosen frame: an id such as <code>cam3_1736153024000__0039</code> (clip plus frame number), its time, camera, day/night and dev/test.</p></div><div class="chunk"><pre><span class="ln">58</span>    df = pd.DataFrame(picks).sample(frac=1, random_state=SEED).reset_index(drop=True)   # shuffled labelling order</pre><p>Shuffles the row order, so the labelling page mixes cameras instead of showing one camera at a time.</p></div><div class="chunk"><pre><span class="ln">59</span>    img_dir = WORK / &quot;eval_images&quot;
+<span class="ln">60</span>    img_dir.mkdir(parents=True, exist_ok=True)
+<span class="ln">61</span>    for vid, g in df.groupby(&quot;video_id&quot;):
+<span class="ln">62</span>        want = set(g.frame)
+<span class="ln">63</span>        path = ROOT / man.loc[man.video_id == vid, &quot;path&quot;].iloc[0]
+<span class="ln">64</span>        for i, t, f in iter_frames(path, fps=SAMPLE_FPS, width=INFER_WIDTH, height=INFER_WIDTH * 9 // 16):
+<span class="ln">65</span>            if i in want:
+<span class="ln">66</span>                cv2.imwrite(str(img_dir / f&quot;{vid}__{i:04d}.jpg&quot;), f, [cv2.IMWRITE_JPEG_QUALITY, 82])
+<span class="ln">67</span>            if i &gt; max(want):
+<span class="ln">68</span>                break</pre><p>Saves the chosen frames as JPEG images. Each clip is decoded with the same sampler as <code>detect.py</code>, so the image you labelled is exactly what the model saw. Decoding stops after the last needed frame.</p></div><div class="chunk"><pre><span class="ln">69</span>    missing = [fid for fid in df.frame_id if not (img_dir / f&quot;{fid}.jpg&quot;).exists()]
+<span class="ln">70</span>    df = df[~df.frame_id.isin(missing)]
+<span class="ln">71</span>    (OUT / &quot;eval&quot;).mkdir(parents=True, exist_ok=True)
+<span class="ln">72</span>    df.to_csv(OUT / &quot;eval&quot; / &quot;eval_frames.csv&quot;, index=False)</pre><p>Drops any frame that failed to save (none did) and writes the list to <code>outputs/eval/eval_frames.csv</code>.</p></div><div class="chunk"><pre><span class="ln">73</span>    print(df.groupby([&quot;camera&quot;, &quot;night&quot;, &quot;split&quot;]).size().to_string())
+<span class="ln">74</span>    print(f&quot;{len(df)} frames from {df.video_id.nunique()} clips; missing {len(missing)}&quot;)</pre><p>Prints counts per group.</p></div><div class="chunk"><pre><span class="ln">77</span>if __name__ == &quot;__main__&quot;:
+<span class="ln">78</span>    main()</pre><p>Runs <code>main()</code> when the file is run directly.</p></div></section><section class="file"><h2><span class="n">10</span><span class="mono">src/stats.py</span></h2><p class="purpose">Step 4. Turns the confirmed dog tracks into behaviour statistics per camera: visits, dogs per visit, time on screen, moving versus resting, closeness between dogs, plus two charts.</p><div class="chunk"><pre><span class="ln">1</span>&quot;&quot;&quot;Step 4: turn confirmed dog tracks into per-camera behaviour statistics.
+<span class="ln">2</span> 
+<span class="ln">3</span>Definitions (all from confirmed tracks, see track.py):
+<span class="ln">4</span>* dogs in a clip      = max number of confirmed tracks present in the same frame
+<span class="ln">5</span>                        (a lower bound on distinct dogs; robust to ID switches,
+<span class="ln">6</span>                        which would inflate a raw track count)
+<span class="ln">7</span>* dog-seconds         = sum over frames of dogs present / SAMPLE_FPS
+<span class="ln">8</span>* visit               = consecutive clips with dogs on one camera, merged when the gap
+<span class="ln">9</span>                        between one clip&#x27;s end and the next one&#x27;s start is &lt;= VISIT_GAP_S
+<span class="ln">10</span>                        (cameras record motion-triggered bursts of 3-30 s clips)
+<span class="ln">11</span>* moving vs resting   = per track second, box-centre speed in body lengths per second
+<span class="ln">12</span>                        (box height as the body-length proxy) above/below MOVE_BL_S
+<span class="ln">13</span>* interaction         = a frame where two dogs&#x27; box centres are closer than the mean
+<span class="ln">14</span>                        of their box widths (touching / face-to-face / feeding together)
+<span class="ln">15</span>Times are local (UTC+7) recording times from manifest.start_time.
+<span class="ln">16</span> 
+<span class="ln">17</span>usage: python stats.py --tracks yolo11s_640
+<span class="ln">18</span>&quot;&quot;&quot;</pre><p>Docstring defining every statistic. Read it once; the rest of the file implements these definitions.</p></div><div class="chunk"><pre><span class="ln">19</span>import argparse, json
+<span class="ln">20</span>import numpy as np, pandas as pd
+<span class="ln">21</span>import matplotlib
+<span class="ln">22</span>matplotlib.use(&quot;Agg&quot;)
+<span class="ln">23</span>import matplotlib.pyplot as plt
+<span class="ln">24</span>from config import OUT, MANIFEST, SAMPLE_FPS</pre><p>Imports. <code>matplotlib.use("Agg")</code> makes charts draw straight to image files without needing a screen.</p></div><div class="chunk"><pre><span class="ln">26</span>VISIT_GAP_S = 120
+<span class="ln">27</span>MOVE_BL_S = 0.25
+<span class="ln">28</span>CAM_SHORT = {&quot;Camera1_LocationA&quot;: &quot;Cam1 (A)&quot;, &quot;Camera3_LocationC&quot;: &quot;Cam3 (C)&quot;, &quot;Camera4_LocationD&quot;: &quot;Cam4 (D)&quot;}</pre><p>Settings: clips less than 120 s apart belong to the same visit; a dog moving more than 0.25 body lengths per second counts as moving; short camera names for the charts.</p></div><div class="chunk"><pre><span class="ln">31</span>def main(tag):
+<span class="ln">32</span>    man = pd.read_csv(MANIFEST)
+<span class="ln">33</span>    man = man[man.duplicate_of.isna()].copy()
+<span class="ln">34</span>    man[&quot;start&quot;] = pd.to_datetime(man.start_time)
+<span class="ln">35</span>    man[&quot;end&quot;] = man.start + pd.to_timedelta(man.duration_s, unit=&quot;s&quot;)</pre><p>Loads the manifest (unique clips only) and works out each clip's start and end time.</p></div><div class="chunk"><pre><span class="ln">36</span>    F = pd.read_csv(OUT / &quot;frames.csv.gz&quot;)
+<span class="ln">37</span>    F[&quot;night&quot;] = F.colourfulness &lt; 4</pre><p>Loads the frame list and marks a frame as night if its colourfulness is under 4.</p></div><div class="chunk"><pre><span class="ln">38</span>    T = pd.read_csv(OUT / f&quot;tracks_{tag}.csv.gz&quot;)
+<span class="ln">39</span>    T = T[T.confirmed]
+<span class="ln">40</span>    T[&quot;cx&quot;], T[&quot;cy&quot;] = (T.x1 + T.x2) / 2, (T.y1 + T.y2) / 2
+<span class="ln">41</span>    T[&quot;w&quot;], T[&quot;h&quot;] = T.x2 - T.x1, T.y2 - T.y1</pre><p>Loads the tracks, keeps confirmed ones, and computes each box's centre (<code>cx</code>, <code>cy</code>), width and height.</p></div><div class="chunk"><pre><span class="ln">43</span>    # ---- per clip
+<span class="ln">44</span>    per_frame = T.groupby([&quot;video_id&quot;, &quot;frame&quot;]).size().rename(&quot;dogs&quot;).reset_index()</pre><p>Counts how many confirmed dogs are in each frame.</p></div><div class="chunk"><pre><span class="ln">45</span>    clip = man[[&quot;video_id&quot;, &quot;camera&quot;, &quot;start&quot;, &quot;end&quot;, &quot;duration_s&quot;]].set_index(&quot;video_id&quot;)
+<span class="ln">46</span>    clip[&quot;night&quot;] = F.groupby(&quot;video_id&quot;).night.mean().reindex(clip.index).fillna(0) &gt; 0.5
+<span class="ln">47</span>    clip[&quot;dogs&quot;] = per_frame.groupby(&quot;video_id&quot;).dogs.max().reindex(clip.index).fillna(0).astype(int)
+<span class="ln">48</span>    clip[&quot;dog_seconds&quot;] = (per_frame.groupby(&quot;video_id&quot;).dogs.sum() / SAMPLE_FPS).reindex(clip.index).fillna(0)
+<span class="ln">49</span>    clip[&quot;tracks&quot;] = T.groupby(&quot;video_id&quot;).uid.nunique().reindex(clip.index).fillna(0).astype(int)</pre><p>Builds a table with one row per clip: night if over half its frames are infrared; <code>dogs</code> = the most dogs in any single frame (a safe lower bound on distinct dogs); <code>dog_seconds</code> = sum of dogs per frame / 3 (each frame stands for a third of a second); number of tracks. <code>fillna(0)</code> gives clips with no dogs a 0 instead of a blank.</p></div><div class="chunk"><pre><span class="ln">51</span>    # ---- activity: moving vs resting
+<span class="ln">52</span>    T = T.sort_values([&quot;uid&quot;, &quot;frame&quot;])
+<span class="ln">53</span>    g = T.groupby(&quot;uid&quot;)</pre><p>Sorts track rows by track and time, then groups by track.</p></div><div class="chunk"><pre><span class="ln">54</span>    step = np.hypot(g.cx.diff(), g.cy.diff() * 9 / 16) / (g.frame.diff() / SAMPLE_FPS)   # in image widths / s</pre><p>How far each box centre moved since the previous frame, divided by the seconds in between. The vertical part is multiplied by 9/16 because positions are fractions of width and height, and the frame is 16:9.</p></div><div class="chunk"><pre><span class="ln">55</span>    T[&quot;speed_bl&quot;] = step / (T.h * 9 / 16).clip(lower=1e-3)                               # body lengths / s
+<span class="ln">56</span>    T[&quot;moving&quot;] = T.speed_bl &gt; MOVE_BL_S</pre><p>Divides that speed by the dog's box height, giving body lengths per second, so a big nearby dog and a small far dog can be compared. Above 0.25 counts as moving.</p></div><div class="chunk"><pre><span class="ln">57</span>    moving_frac = T.dropna(subset=[&quot;speed_bl&quot;]).groupby(&quot;video_id&quot;).moving.mean()
+<span class="ln">58</span>    clip[&quot;moving_frac&quot;] = moving_frac.reindex(clip.index)</pre><p>Per clip, the share of dog time spent moving.</p></div><div class="chunk"><pre><span class="ln">60</span>    # ---- interactions
+<span class="ln">61</span>    inter = []
+<span class="ln">62</span>    for (vid, fr), gg in T.groupby([&quot;video_id&quot;, &quot;frame&quot;]):
+<span class="ln">63</span>        if len(gg) &lt; 2:
+<span class="ln">64</span>            continue
+<span class="ln">65</span>        a = gg[[&quot;cx&quot;, &quot;cy&quot;, &quot;w&quot;]].to_numpy()
+<span class="ln">66</span>        hit = False
+<span class="ln">67</span>        for i in range(len(a)):
+<span class="ln">68</span>            for j in range(i + 1, len(a)):
+<span class="ln">69</span>                if np.hypot(a[i, 0] - a[j, 0], (a[i, 1] - a[j, 1]) * 9 / 16) &lt; (a[i, 2] + a[j, 2]) / 2:
+<span class="ln">70</span>                    hit = True
+<span class="ln">71</span>        inter.append((vid, fr, hit))
+<span class="ln">72</span>    I = pd.DataFrame(inter, columns=[&quot;video_id&quot;, &quot;frame&quot;, &quot;interaction&quot;])
+<span class="ln">73</span>    clip[&quot;interaction_seconds&quot;] = (I[I.interaction].groupby(&quot;video_id&quot;).size() / SAMPLE_FPS).reindex(clip.index).fillna(0)</pre><p>Interactions: in every frame with at least 2 dogs, checks every pair. If their centres are closer than the average of their widths (touching, face to face, eating together), the frame counts as an interaction. Totals the seconds per clip.</p></div><div class="chunk"><pre><span class="ln">75</span>    clip = clip.reset_index()
+<span class="ln">76</span>    clip.to_csv(OUT / &quot;stats&quot; / &quot;clips.csv&quot;, index=False)</pre><p>Saves the per-clip table to <code>outputs/stats/clips.csv</code>.</p></div><div class="chunk"><pre><span class="ln">78</span>    # ---- visits
+<span class="ln">79</span>    visits = []
+<span class="ln">80</span>    for cam, c in clip[clip.dogs &gt; 0].sort_values(&quot;start&quot;).groupby(&quot;camera&quot;):
+<span class="ln">81</span>        cur = None
+<span class="ln">82</span>        for r in c.itertuples():
+<span class="ln">83</span>            if cur is not None and (r.start - cur[&quot;end&quot;]).total_seconds() &lt;= VISIT_GAP_S:
+<span class="ln">84</span>                cur[&quot;end&quot;] = max(cur[&quot;end&quot;], r.end); cur[&quot;clips&quot;] += 1
+<span class="ln">85</span>                cur[&quot;max_dogs&quot;] = max(cur[&quot;max_dogs&quot;], r.dogs); cur[&quot;dog_seconds&quot;] += r.dog_seconds
+<span class="ln">86</span>                cur[&quot;night&quot;] = cur[&quot;night&quot;] or r.night
+<span class="ln">87</span>            else:
+<span class="ln">88</span>                if cur: visits.append(cur)
+<span class="ln">89</span>                cur = dict(camera=cam, start=r.start, end=r.end, clips=1, max_dogs=r.dogs,
+<span class="ln">90</span>                           dog_seconds=r.dog_seconds, night=r.night)
+<span class="ln">91</span>        if cur: visits.append(cur)
+<span class="ln">92</span>    V = pd.DataFrame(visits)
+<span class="ln">93</span>    V[&quot;duration_s&quot;] = (V.end - V.start).dt.total_seconds()
+<span class="ln">94</span>    V[&quot;hour&quot;] = V.start.dt.hour
+<span class="ln">95</span>    V.to_csv(OUT / &quot;stats&quot; / &quot;visits.csv&quot;, index=False)</pre><p>Visits: per camera, goes through the clips with dogs in time order. If a clip starts within 120 s of the current visit's end, it extends that visit (later end, one more clip, largest dog count, more dog-seconds). Otherwise the current visit is closed and a new one starts. Adds each visit's length and starting hour, and saves to <code>visits.csv</code>.</p></div><div class="chunk"><pre><span class="ln">97</span>    # ---- per camera summary
+<span class="ln">98</span>    summ = {}
+<span class="ln">99</span>    for cam, c in clip.groupby(&quot;camera&quot;):
+<span class="ln">100</span>        v = V[V.camera == cam]
+<span class="ln">101</span>        days = (c.start.max().normalize() - c.start.min().normalize()).days + 1
+<span class="ln">102</span>        summ[cam] = dict(
+<span class="ln">103</span>            clips=int(len(c)), footage_min=round(c.duration_s.sum() / 60, 1),
+<span class="ln">104</span>            clips_with_dogs=int((c.dogs &gt; 0).sum()), pct_clips_with_dogs=round(100 * (c.dogs &gt; 0).mean(), 1),
+<span class="ln">105</span>            recording_span=f&quot;{c.start.min():%Y-%m-%d %H:%M} to {c.end.max():%Y-%m-%d %H:%M}&quot;, calendar_days=int(days),
+<span class="ln">106</span>            visits=int(len(v)), visits_per_day=round(len(v) / days, 1),
+<span class="ln">107</span>            median_visit_s=round(float(v.duration_s.median()), 1) if len(v) else None,
+<span class="ln">108</span>            max_dogs_at_once=int(c.dogs.max()), mean_dogs_per_visit=round(float(v.max_dogs.mean()), 2) if len(v) else None,
+<span class="ln">109</span>            dog_minutes=round(c.dog_seconds.sum() / 60, 1),
+<span class="ln">110</span>            pct_dog_time_moving=round(100 * float(T[T.video_id.isin(c.video_id)].moving.mean()), 1),
+<span class="ln">111</span>            interaction_minutes=round(c.interaction_seconds.sum() / 60, 2),
+<span class="ln">112</span>            night_visits=int(v.night.sum()) if len(v) else 0)
+<span class="ln">113</span>    (OUT / &quot;stats&quot; / &quot;summary.json&quot;).write_text(json.dumps(summ, indent=2))
+<span class="ln">114</span>    print(pd.DataFrame(summ).T.to_string())</pre><p>Per-camera summary: clips, minutes of footage, share of clips with dogs, recording span, visits and visits per day, typical visit length, most dogs at once, dog-minutes, share of time moving, interaction minutes and night visits. Saves to <code>summary.json</code> and prints it as a table.</p></div><div class="chunk"><pre><span class="ln">116</span>    # ---- figures
+<span class="ln">117</span>    cams = sorted(clip.camera.unique())
+<span class="ln">118</span>    fig, axes = plt.subplots(len(cams), 1, figsize=(9, 2.3 * len(cams)), sharex=True)
+<span class="ln">119</span>    for ax, cam in zip(np.atleast_1d(axes), cams):
+<span class="ln">120</span>        c = clip[clip.camera == cam]
+<span class="ln">121</span>        rec = c.groupby(c.start.dt.hour).duration_s.sum() / 60
+<span class="ln">122</span>        dog = c.groupby(c.start.dt.hour).dog_seconds.sum() / 60
+<span class="ln">123</span>        hrs = np.arange(24)
+<span class="ln">124</span>        ax.bar(hrs, rec.reindex(hrs).fillna(0), color=&quot;#c9d3cc&quot;, label=&quot;footage recorded (min)&quot;)
+<span class="ln">125</span>        ax.bar(hrs, dog.reindex(hrs).fillna(0), color=&quot;#1f7a5a&quot;, width=0.55, label=&quot;dog-minutes detected&quot;)
+<span class="ln">126</span>        ax.set_ylabel(CAM_SHORT.get(cam, cam)); ax.spines[[&quot;top&quot;, &quot;right&quot;]].set_visible(False)
+<span class="ln">127</span>    np.atleast_1d(axes)[0].legend(frameon=False, fontsize=8, loc=&quot;upper left&quot;)
+<span class="ln">128</span>    np.atleast_1d(axes)[-1].set_xticks(range(0, 24, 2)); np.atleast_1d(axes)[-1].set_xlabel(&quot;hour of day (local time)&quot;)
+<span class="ln">129</span>    fig.suptitle(&quot;Dog activity by hour (all days pooled)&quot;, x=0.01, ha=&quot;left&quot;)
+<span class="ln">130</span>    fig.tight_layout(); fig.savefig(OUT / &quot;stats&quot; / &quot;activity_by_hour.png&quot;, dpi=150); plt.close(fig)</pre><p>Chart 1, activity by hour: one panel per camera, with grey bars for minutes of footage recorded in each hour of the day and green bars for dog-minutes. Saved as <code>activity_by_hour.png</code>.</p></div><div class="chunk"><pre><span class="ln">132</span>    fig, ax = plt.subplots(figsize=(10, 2.8))
+<span class="ln">133</span>    for k, cam in enumerate(cams):
+<span class="ln">134</span>        c = clip[clip.camera == cam]; v = V[V.camera == cam]
+<span class="ln">135</span>        ax.scatter(c.start, np.full(len(c), k), s=6, color=&quot;#c9d3cc&quot;, label=&quot;clip recorded&quot; if k == 0 else None)
+<span class="ln">136</span>        ax.scatter(v.start, np.full(len(v), k), s=18 + 18 * v.max_dogs, color=&quot;#1f7a5a&quot;, alpha=.7,
+<span class="ln">137</span>                   label=&quot;dog visit (size = dogs)&quot; if k == 0 else None)
+<span class="ln">138</span>    ax.set_yticks(range(len(cams)), [CAM_SHORT.get(c, c) for c in cams]); ax.set_ylim(-.6, len(cams) - .4)
+<span class="ln">139</span>    ax.spines[[&quot;top&quot;, &quot;right&quot;]].set_visible(False); ax.legend(frameon=False, fontsize=8, loc=&quot;upper right&quot;, ncol=2)
+<span class="ln">140</span>    ax.set_title(&quot;Visits over the recording period&quot;, loc=&quot;left&quot;)
+<span class="ln">141</span>    fig.tight_layout(); fig.savefig(OUT / &quot;stats&quot; / &quot;visit_timeline.png&quot;, dpi=150); plt.close(fig)</pre><p>Chart 2, timeline: one row per camera, a small grey dot for every clip and a green dot for every visit, bigger when more dogs were present. Saved as <code>visit_timeline.png</code>.</p></div><div class="chunk"><pre><span class="ln">144</span>if __name__ == &quot;__main__&quot;:
+<span class="ln">145</span>    ap = argparse.ArgumentParser()
+<span class="ln">146</span>    ap.add_argument(&quot;--tracks&quot;, default=&quot;yolo11s_640&quot;)
+<span class="ln">147</span>    main(ap.parse_args().tracks)</pre><p>Command-line option to choose which tracks file to use.</p></div></section><section class="file"><h2><span class="n">11</span><span class="mono">src/evaluate.py</span></h2><p class="purpose">Step 5. Compares each detector setup against your hand labels and reports precision, recall, F1 and AP@0.5 with 95% intervals, plus breakdowns by camera and day/night.</p><div class="chunk"><pre><span class="ln">1</span>&quot;&quot;&quot;Step 5: evaluate detectors against the hand labels.
+<span class="ln">2</span> 
+<span class="ln">3</span>Ground truth: outputs/eval/labels.json (exported from the labelling page), boxes in
+<span class="ln">4</span>normalised coords; &#x27;hard&#x27; boxes (mostly hidden / too small to be sure) are IGNORE
+<span class="ln">5</span>regions: a detection on one is neither a true nor a false positive, and missing one
+<span class="ln">6</span>is not a false negative. Skipped frames are dropped.
+<span class="ln">7</span> 
+<span class="ln">8</span>Protocol
+<span class="ln">9</span>* every config predicts on the same 1280x720 frames (pixel-identical to detect.py)
+<span class="ln">10</span>* a detection is a true positive at IoU &gt;= 0.5 with an unmatched dog box (greedy, by score)
+<span class="ln">11</span>* AP@0.5 = all-point interpolated area under the precision-recall curve (VOC/COCO style)
+<span class="ln">12</span>* the operating threshold is chosen on the DEV split (max F1) and then applied to TEST;
+<span class="ln">13</span>  all headline numbers are TEST numbers with 95% bootstrap intervals over frames
+<span class="ln">14</span>* breakdowns by camera and day/night use all labelled frames (dev+test) for stability
+<span class="ln">15</span>  and are reported at each config&#x27;s dev-chosen threshold
+<span class="ln">16</span> 
+<span class="ln">17</span>usage: python evaluate.py            (runs missing predictions, then scores)
+<span class="ln">18</span>&quot;&quot;&quot;</pre><p>Docstring: the full evaluation protocol. These are the rules quoted in the report.</p></div><div class="chunk"><pre><span class="ln">19</span>import json, argparse
+<span class="ln">20</span>import numpy as np, pandas as pd
+<span class="ln">21</span>from config import OUT, WORK, MODELS, SAMPLE_FPS</pre><p>Imports.</p></div><div class="chunk"><pre><span class="ln">23</span>CONFIGS = [&quot;yolo11n_640&quot;, &quot;yolo11s_640&quot;, &quot;yolo11m_640&quot;, &quot;yolo11s_960&quot;, &quot;yolo11m_960&quot;]
+<span class="ln">24</span>ANIMALS = {&quot;dog&quot;, &quot;cat&quot;, &quot;sheep&quot;, &quot;cow&quot;, &quot;bear&quot;, &quot;horse&quot;}
+<span class="ln">25</span>EVAL = OUT / &quot;eval&quot;
+<span class="ln">26</span>RNG = np.random.default_rng(0)</pre><p>The 5 model setups to compare; which COCO classes count as 'animal'; the evaluation folder; a fixed random generator, so the bootstrap intervals are the same every run.</p></div><div class="chunk"><pre><span class="ln">29</span>def predict(tag):
+<span class="ln">30</span>    from ultralytics import YOLO
+<span class="ln">31</span>    import cv2
+<span class="ln">32</span>    p = EVAL / f&quot;preds_{tag}.csv&quot;
+<span class="ln">33</span>    if p.exists():
+<span class="ln">34</span>        return pd.read_csv(p)</pre><p><code>predict</code>: if this setup's predictions were already saved, load them instead of re-running the model.</p></div><div class="chunk"><pre><span class="ln">35</span>    m, sz = tag.rsplit(&quot;_&quot;, 1)
+<span class="ln">36</span>    model = YOLO(str(MODELS / f&quot;{m}.pt&quot;))
+<span class="ln">37</span>    names = model.names</pre><p>Splits a name like <code>yolo11m_960</code> into model and input size, loads the model and its class names.</p></div><div class="chunk"><pre><span class="ln">38</span>    fr = pd.read_csv(EVAL / &quot;eval_frames.csv&quot;)
+<span class="ln">39</span>    rows = []
+<span class="ln">40</span>    for fid in fr.frame_id:
+<span class="ln">41</span>        im = cv2.imread(str(WORK / &quot;eval_images&quot; / f&quot;{fid}.jpg&quot;))
+<span class="ln">42</span>        r = model.predict(im, imgsz=int(sz), conf=0.01, verbose=False)[0]
+<span class="ln">43</span>        for (x1, y1, x2, y2), c, s in zip(r.boxes.xyxyn.numpy(), r.boxes.cls.numpy().astype(int), r.boxes.conf.numpy()):
+<span class="ln">44</span>            if names[c] in ANIMALS or names[c] == &quot;person&quot;:
+<span class="ln">45</span>                rows.append((fid, names[c], float(s), x1, y1, x2, y2))</pre><p>Runs the model on each of the 180 evaluation images with a very low threshold (0.01), so every possible box is kept and any threshold can be tested later. Keeps animals and people.</p></div><div class="chunk"><pre><span class="ln">46</span>    df = pd.DataFrame(rows, columns=[&quot;frame_id&quot;, &quot;cls&quot;, &quot;conf&quot;, &quot;x1&quot;, &quot;y1&quot;, &quot;x2&quot;, &quot;y2&quot;])
+<span class="ln">47</span>    df.to_csv(p, index=False)
+<span class="ln">48</span>    return df</pre><p>Saves the predictions to <code>outputs/eval/preds_&lt;setup&gt;.csv</code> and returns them.</p></div><div class="chunk"><pre><span class="ln">51</span>def tracked_preds(det_tag):
+<span class="ln">52</span>    &quot;&quot;&quot;Boxes the full pipeline keeps after tracking (confirmed tracks only) on the eval frames.&quot;&quot;&quot;
+<span class="ln">53</span>    T = pd.read_csv(OUT / f&quot;tracks_{det_tag}.csv.gz&quot;)
+<span class="ln">54</span>    T = T[T.confirmed]
+<span class="ln">55</span>    fr = pd.read_csv(EVAL / &quot;eval_frames.csv&quot;)
+<span class="ln">56</span>    m = T.merge(fr[[&quot;frame_id&quot;, &quot;video_id&quot;, &quot;frame&quot;]], on=[&quot;video_id&quot;, &quot;frame&quot;])
+<span class="ln">57</span>    return pd.DataFrame(dict(frame_id=m.frame_id, cls=&quot;dog&quot;, conf=m.score, x1=m.x1, y1=m.y1, x2=m.x2, y2=m.y2))</pre><p><code>tracked_preds</code>: the boxes the <i>whole pipeline</i> keeps after tracking (confirmed tracks only) on the evaluation frames, so tracking can be scored too. The track's score is used as its confidence.</p></div><div class="chunk"><pre><span class="ln">60</span>def iou(a, B):
+<span class="ln">61</span>    if len(B) == 0:
+<span class="ln">62</span>        return np.zeros(0)
+<span class="ln">63</span>    ix = np.clip(np.minimum(a[2], B[:, 2]) - np.maximum(a[0], B[:, 0]), 0, None)
+<span class="ln">64</span>    iy = np.clip(np.minimum(a[3], B[:, 3]) - np.maximum(a[1], B[:, 1]), 0, None)
+<span class="ln">65</span>    inter = ix * iy
+<span class="ln">66</span>    ua = (a[2] - a[0]) * (a[3] - a[1]) + (B[:, 2] - B[:, 0]) * (B[:, 3] - B[:, 1]) - inter
+<span class="ln">67</span>    return inter / np.maximum(ua, 1e-9)</pre><p><code>iou</code>: Intersection over Union. For box <code>a</code> and each box in <code>B</code>: the overlapping area (0 if they don't touch) divided by the area the two boxes cover together. 1 = identical, 0 = no overlap.</p></div><div class="chunk"><pre><span class="ln">70</span>def match(preds, gt, frames, iou_thr=0.5):
+<span class="ln">71</span>    &quot;&quot;&quot;Return (scores, is_tp) for all non-ignored predictions, and the number of GT boxes.&quot;&quot;&quot;
+<span class="ln">72</span>    scores, tps, n_gt = [], [], 0
+<span class="ln">73</span>    P = {k: g for k, g in preds.groupby(&quot;frame_id&quot;)}
+<span class="ln">74</span>    for fid in frames:
+<span class="ln">75</span>        boxes = gt[fid][&quot;boxes&quot;]
+<span class="ln">76</span>        G = np.array([[b[&quot;x1&quot;], b[&quot;y1&quot;], b[&quot;x2&quot;], b[&quot;y2&quot;]] for b in boxes if not b[&quot;hard&quot;]]).reshape(-1, 4)
+<span class="ln">77</span>        Hd = np.array([[b[&quot;x1&quot;], b[&quot;y1&quot;], b[&quot;x2&quot;], b[&quot;y2&quot;]] for b in boxes if b[&quot;hard&quot;]]).reshape(-1, 4)
+<span class="ln">78</span>        n_gt += len(G)
+<span class="ln">79</span>        used = np.zeros(len(G), bool)</pre><p><code>match</code>, the heart of scoring. For each frame: splits your boxes into normal ones (<code>G</code>) and Hard ones (<code>Hd</code>), counts the normal ones, and prepares a list marking which have been matched.</p></div><div class="chunk"><pre><span class="ln">80</span>        p = P.get(fid)
+<span class="ln">81</span>        if p is None:
+<span class="ln">82</span>            continue</pre><p>If the model drew no boxes in this frame, there is nothing to match, and every dog in it becomes a miss.</p></div><div class="chunk"><pre><span class="ln">83</span>        for r in p.sort_values(&quot;conf&quot;, ascending=False).itertuples():
+<span class="ln">84</span>            a = np.array([r.x1, r.y1, r.x2, r.y2])
+<span class="ln">85</span>            o = iou(a, G); o[used] = -1
+<span class="ln">86</span>            if len(o) and o.max() &gt;= iou_thr:
+<span class="ln">87</span>                used[o.argmax()] = True; scores.append(r.conf); tps.append(True)
+<span class="ln">88</span>            elif len(Hd) and iou(a, Hd).max() &gt;= iou_thr:
+<span class="ln">89</span>                continue                                  # on an ignore region
+<span class="ln">90</span>            else:
+<span class="ln">91</span>                scores.append(r.conf); tps.append(False)</pre><p>Goes through the model's boxes from most to least confident. Overlap of 0.5 or more with an unmatched normal box: a true positive, and that box is now used, so the model can't get credit twice for one dog. Otherwise, overlap with a Hard box: ignored. Otherwise: a false positive (false alarm).</p></div><div class="chunk"><pre><span class="ln">92</span>    return np.array(scores), np.array(tps, bool), n_gt</pre><p>Returns every scored box's confidence, whether it was correct, and the number of real dogs.</p></div><div class="chunk"><pre><span class="ln">95</span>def ap_and_curve(scores, tps, n_gt):
+<span class="ln">96</span>    o = np.argsort(-scores)
+<span class="ln">97</span>    s, t = scores[o], tps[o]
+<span class="ln">98</span>    tp, fp = np.cumsum(t), np.cumsum(~t)
+<span class="ln">99</span>    rec = tp / max(n_gt, 1)
+<span class="ln">100</span>    prec = tp / np.maximum(tp + fp, 1)
+<span class="ln">101</span>    mpre = np.concatenate([[0], prec, [0]])
+<span class="ln">102</span>    mrec = np.concatenate([[0], rec, [rec[-1] if len(rec) else 0]])
+<span class="ln">103</span>    for i in range(len(mpre) - 2, -1, -1):
+<span class="ln">104</span>        mpre[i] = max(mpre[i], mpre[i + 1])
+<span class="ln">105</span>    idx = np.where(mrec[1:] != mrec[:-1])[0]
+<span class="ln">106</span>    ap = float(np.sum((mrec[idx + 1] - mrec[idx]) * mpre[idx + 1]))
+<span class="ln">107</span>    return ap, s, prec, rec</pre><p><code>ap_and_curve</code>: sorts boxes by confidence and walks down the list. At each step, recall = dogs found so far / all dogs and precision = correct boxes so far / boxes so far. The precision line is smoothed so it never goes up again (the standard rule), and the area under the precision-recall curve is the AP.</p></div><div class="chunk"><pre><span class="ln">110</span>def at_threshold(scores, tps, n_gt, thr):
+<span class="ln">111</span>    k = scores &gt;= thr
+<span class="ln">112</span>    tp, fp = int(tps[k].sum()), int((~tps[k]).sum())
+<span class="ln">113</span>    fn = n_gt - tp
+<span class="ln">114</span>    p = tp / (tp + fp) if tp + fp else 1.0
+<span class="ln">115</span>    r = tp / n_gt if n_gt else 1.0
+<span class="ln">116</span>    return dict(precision=p, recall=r, f1=2 * p * r / (p + r) if p + r else 0, tp=tp, fp=fp, fn=fn)</pre><p><code>at_threshold</code>: keeps boxes at or above one confidence threshold and counts true positives, false positives and misses (false negatives), then precision, recall and F1 (their balance).</p></div><div class="chunk"><pre><span class="ln">119</span>def best_threshold(scores, tps, n_gt):
+<span class="ln">120</span>    cands = np.unique(np.round(scores, 3))
+<span class="ln">121</span>    best = max(cands, key=lambda t: (at_threshold(scores, tps, n_gt, t)[&quot;f1&quot;], -t)) if len(cands) else 0.25
+<span class="ln">122</span>    return float(best)</pre><p><code>best_threshold</code>: tries every distinct confidence value as a threshold and picks the one with the best F1. If two tie, it picks the lower one.</p></div><div class="chunk"><pre><span class="ln">125</span>def bootstrap(preds, gt, frames, thr, n=1000):
+<span class="ln">126</span>    frames = np.array(frames)
+<span class="ln">127</span>    aps, f1s = [], []
+<span class="ln">128</span>    for _ in range(n):
+<span class="ln">129</span>        fs = RNG.choice(frames, len(frames), replace=True)
+<span class="ln">130</span>        # duplicate frames get unique keys so each copy counts
+<span class="ln">131</span>        g2, p2 = {}, []
+<span class="ln">132</span>        for k, f in enumerate(fs):
+<span class="ln">133</span>            key = f&quot;{f}#{k}&quot;; g2[key] = gt[f]
+<span class="ln">134</span>            pp = preds[preds.frame_id == f]
+<span class="ln">135</span>            if len(pp): p2.append(pp.assign(frame_id=key))
+<span class="ln">136</span>        P2 = pd.concat(p2) if p2 else preds.iloc[:0]
+<span class="ln">137</span>        s, t, ng = match(P2, g2, list(g2))
+<span class="ln">138</span>        aps.append(ap_and_curve(s, t, ng)[0]); f1s.append(at_threshold(s, t, ng, thr)[&quot;f1&quot;])
+<span class="ln">139</span>    q = lambda v: [round(float(np.percentile(v, 2.5)), 3), round(float(np.percentile(v, 97.5)), 3)]
+<span class="ln">140</span>    return q(aps), q(f1s)</pre><p><code>bootstrap</code>: 1,000 times, draws a new set of test frames at random <i>with replacement</i> (some frames twice, some not at all) and rescores. The middle 95% of those 1,000 scores is the reported interval, which shows how much the result could change with a different sample of frames.</p></div><div class="chunk"><pre><span class="ln">143</span>def main(boot=1000):
+<span class="ln">144</span>    labels = json.loads((EVAL / &quot;labels.json&quot;).read_text())
+<span class="ln">145</span>    fr = pd.read_csv(EVAL / &quot;eval_frames.csv&quot;)
+<span class="ln">146</span>    fr = fr[fr.frame_id.map(lambda f: labels.get(f, {}).get(&quot;status&quot;) == &quot;done&quot;)]
+<span class="ln">147</span>    gt = {f: labels[f] for f in fr.frame_id}
+<span class="ln">148</span>    dev, test = fr[fr.split == &quot;dev&quot;].frame_id.tolist(), fr[fr.split == &quot;test&quot;].frame_id.tolist()
+<span class="ln">149</span>    n_boxes = sum(len([b for b in gt[f][&quot;boxes&quot;] if not b[&quot;hard&quot;]]) for f in gt)
+<span class="ln">150</span>    n_hard = sum(len([b for b in gt[f][&quot;boxes&quot;] if b[&quot;hard&quot;]]) for f in gt)
+<span class="ln">151</span>    print(f&quot;labelled frames: {len(gt)} (dev {len(dev)}, test {len(test)}); dog boxes {n_boxes}, hard {n_hard}&quot;)</pre><p><code>main</code>: loads your labels, keeps frames marked done (skipped frames drop out), splits them into dev and test, and counts normal and Hard boxes.</p></div><div class="chunk"><pre><span class="ln">153</span>    variants = {}
+<span class="ln">154</span>    for tag in CONFIGS:
+<span class="ln">155</span>        P = predict(tag)
+<span class="ln">156</span>        variants[tag] = P[P.cls == &quot;dog&quot;]
+<span class="ln">157</span>    variants[&quot;yolo11s_640+animals&quot;] = predict(&quot;yolo11s_640&quot;).pipe(lambda P: P[P.cls.isin(ANIMALS)])
+<span class="ln">158</span>    try:
+<span class="ln">159</span>        variants[&quot;yolo11s_640+tracking&quot;] = tracked_preds(&quot;yolo11s_640&quot;)
+<span class="ln">160</span>    except FileNotFoundError:
+<span class="ln">161</span>        pass</pre><p>Builds the setups to compare: each model's dog boxes; YOLO11s counting all animal classes as dog; and YOLO11s after tracking.</p></div><div class="chunk"><pre><span class="ln">163</span>    res, curves = {}, {}
+<span class="ln">164</span>    for name, P in variants.items():
+<span class="ln">165</span>        sd, td, nd = match(P, gt, dev)
+<span class="ln">166</span>        thr = best_threshold(sd, td, nd)
+<span class="ln">167</span>        st, tt, nt = match(P, gt, test)
+<span class="ln">168</span>        ap, s, prec, rec = ap_and_curve(st, tt, nt)
+<span class="ln">169</span>        m = at_threshold(st, tt, nt, thr)
+<span class="ln">170</span>        ci_ap, ci_f1 = bootstrap(P, gt, test, thr, boot) if boot else (None, None)
+<span class="ln">171</span>        res[name] = dict(threshold_from_dev=thr, test_AP50=round(ap, 3), test_AP50_CI95=ci_ap,
+<span class="ln">172</span>                         test_precision=round(m[&quot;precision&quot;], 3), test_recall=round(m[&quot;recall&quot;], 3),
+<span class="ln">173</span>                         test_F1=round(m[&quot;f1&quot;], 3), test_F1_CI95=ci_f1, test_TP=m[&quot;tp&quot;], test_FP=m[&quot;fp&quot;], test_FN=m[&quot;fn&quot;],
+<span class="ln">174</span>                         at_default_0_25=at_threshold(st, tt, nt, 0.25))
+<span class="ln">175</span>        curves[name] = (rec, prec)</pre><p>For each setup: picks the threshold on <b>dev</b>, then scores <b>test</b> with it (AP, precision, recall, F1, intervals). Also records results at the common default threshold of 0.25.</p></div><div class="chunk"><pre><span class="ln">176</span>        # breakdowns on all frames
+<span class="ln">177</span>        br = {}
+<span class="ln">178</span>        for key, sub in [(&quot;camera&quot;, &quot;camera&quot;), (&quot;night&quot;, &quot;night&quot;)]:
+<span class="ln">179</span>            for val, g in fr.groupby(sub):
+<span class="ln">180</span>                s2, t2, n2 = match(P, gt, g.frame_id.tolist())
+<span class="ln">181</span>                a2 = ap_and_curve(s2, t2, n2)[0]
+<span class="ln">182</span>                mm = at_threshold(s2, t2, n2, thr)
+<span class="ln">183</span>                br[f&quot;{key}={val}&quot;] = dict(frames=len(g), dogs=n2, AP50=round(a2, 3), precision=round(mm[&quot;precision&quot;], 3),
+<span class="ln">184</span>                                          recall=round(mm[&quot;recall&quot;], 3), FP=mm[&quot;fp&quot;], FN=mm[&quot;fn&quot;])
+<span class="ln">185</span>        res[name][&quot;breakdown_all_frames&quot;] = br</pre><p>Breakdowns by camera and by day/night, using all labelled frames for steadier numbers.</p></div><div class="chunk"><pre><span class="ln">186</span>        print(f&quot;{name:24s} thr={thr:.3f}  AP50={ap:.3f} {ci_ap}  P={m[&#x27;precision&#x27;]:.3f} R={m[&#x27;recall&#x27;]:.3f} F1={m[&#x27;f1&#x27;]:.3f} {ci_f1}&quot;)
+<span class="ln">187</span>    (EVAL / &quot;metrics.json&quot;).write_text(json.dumps(res, indent=2, default=float))</pre><p>Prints one line per setup and saves everything to <code>outputs/eval/metrics.json</code>.</p></div><div class="chunk"><pre><span class="ln">189</span>    import matplotlib; matplotlib.use(&quot;Agg&quot;); import matplotlib.pyplot as plt
+<span class="ln">190</span>    fig, ax = plt.subplots(figsize=(6, 4.5))
+<span class="ln">191</span>    for name, (r, p) in curves.items():
+<span class="ln">192</span>        ax.plot(r, p, label=f&quot;{name} (AP50 {res[name][&#x27;test_AP50&#x27;]:.2f})&quot;, lw=1.6)
+<span class="ln">193</span>    ax.set_xlabel(&quot;recall&quot;); ax.set_ylabel(&quot;precision&quot;); ax.set_xlim(0, 1); ax.set_ylim(0, 1.02)
+<span class="ln">194</span>    ax.spines[[&quot;top&quot;, &quot;right&quot;]].set_visible(False); ax.legend(fontsize=7, frameon=False, loc=&quot;lower left&quot;)
+<span class="ln">195</span>    ax.set_title(&quot;Precision-recall on the test split (dog, IoU 0.5)&quot;, loc=&quot;left&quot;, fontsize=10)
+<span class="ln">196</span>    fig.tight_layout(); fig.savefig(EVAL / &quot;pr_curves.png&quot;, dpi=150)</pre><p>Draws all precision-recall curves on one chart: <code>outputs/eval/pr_curves.png</code>.</p></div><div class="chunk"><pre><span class="ln">199</span>if __name__ == &quot;__main__&quot;:
+<span class="ln">200</span>    ap = argparse.ArgumentParser()
+<span class="ln">201</span>    ap.add_argument(&quot;--boot&quot;, type=int, default=1000)
+<span class="ln">202</span>    ap.add_argument(&quot;--predict-only&quot;, action=&quot;store_true&quot;)
+<span class="ln">203</span>    a = ap.parse_args()
+<span class="ln">204</span>    if a.predict_only:
+<span class="ln">205</span>        for t in CONFIGS:
+<span class="ln">206</span>            predict(t); print(&quot;predicted&quot;, t)
+<span class="ln">207</span>    else:
+<span class="ln">208</span>        main(a.boot)</pre><p>Command-line options: <code>--boot</code> sets the number of bootstrap rounds; <code>--predict-only</code> just runs the models, without scoring.</p></div></section><section class="file"><h2><span class="n">12</span><span class="mono">tools/label_tool.html</span></h2><p class="purpose">The labelling page you used. It is a web page (HTML, CSS and JavaScript), not part of the Python pipeline, so it is explained block by block rather than line by line.</p><div class="chunk"><p><b>Top of the file</b>. The page title, fonts from Google Fonts, and the style rules (CSS). Colours are defined once as tokens such as <code>--accent</code> and <code>--box</code>, with a second set for dark mode.</p></div><div class="chunk"><p><b>Page layout (HTML)</b>. The progress bar and counter; the chips showing camera, day/night and status; the 'How to label' guide; the image area (<code>#canvas</code>) holding the image, your saved boxes (<code>#boxes</code>) and the box being drawn (<code>#ghostLayer</code>); the list of boxes with delete buttons; the status line; and the toolbar buttons.</p></div><div class="chunk"><p><b>State variables</b>. <code>frames</code>: the 180 frames. <code>idx</code>: which one is shown. <code>labels</code>: everything saved so far. <code>cur</code>: the boxes of the current frame. <code>sel</code>: the selected box. Plus zoom, pan mode and the connection to the database.</p></div><div class="chunk"><p><b>Local drafts</b>. Unsaved changes are also kept in the browser's own storage (<code>localStorage</code>), so a dropped connection doesn't lose a box. The last frame you were on is remembered too.</p></div><div class="chunk"><p><b>load(i)</b>. Shows frame number <i>i</i>: saves the previous frame first, picks up its saved boxes (or a draft), sets the image, and updates the chips and buttons.</p></div><div class="chunk"><p><b>render()</b>. Redraws the boxes, labels and the box list from <code>cur</code>. Box positions are stored as fractions of the image (0 to 1), so they line up at any zoom or screen size.</p></div><div class="chunk"><p><b>touched() and flush()</b>. After any change, <code>touched()</code> waits 1.2 s for more changes, then <code>flush()</code> saves the frame to the database as <code>labels/&lt;frame id&gt;</code> with its boxes, status (done or skip) and the time. This is the data the evaluation reads.</p></div><div class="chunk"><p><b>Drawing</b>. Finger down starts a box at that point; moving stretches the blue outline; finger up creates the box. A movement under 14 px counts as a tap, which selects the smallest box under your finger. A second finger is ignored while drawing.</p></div><div class="chunk"><p><b>Buttons and keys</b>. Prev, Next, Next unlabelled, Hard, Delete, Zoom (1x, 2x, 3x), Draw/Pan, Skip, No dogs and Done. On a keyboard: N, P, Backspace, H, 0, Enter and Z.</p></div><div class="chunk"><p><b>Loading data</b>. Fetches the frame list (<code>frames.json</code>), then subscribes to the database so saved labels appear immediately and stay up to date. If the database can't be reached, a message says so.</p></div></section>
+</body></html>
