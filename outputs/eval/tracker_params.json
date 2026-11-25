@@ -1,0 +1,16 @@
+{
+  "det_tag": "yolo11m_960_animals",
+  "chosen_on": "dev clips, max F1 of confirmed track boxes",
+  "tracker": {
+    "track_high_thresh": 0.1,
+    "track_low_thresh": 0.01,
+    "new_track_thresh": 0.1
+  },
+  "min_frames": 2,
+  "min_peak": 0.1,
+  "dev": {
+    "precision": 0.953,
+    "recall": 0.646,
+    "F1": 0.77
+  }
+}
