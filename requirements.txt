@@ -11,6 +11,5 @@ scikit-image==0.26.0
 scikit-learn==1.9.1
 opencv-python==5.1.0.95
 
-# only needed to rebuild the report and slides (report/make_report.py, slides/make_slides.py)
+# only needed to rebuild the report PDF (report/make_report.py)
 markdown==3.11.3
-python-pptx==1.0.2

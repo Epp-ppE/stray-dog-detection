@@ -89,7 +89,7 @@ tools/
   import_labels.py     turns exported labels into outputs/eval/labels.json
 outputs/             small results, committed (manifest, tracks, stats, metrics, gallery)
 report/report.pdf    the technical report
-slides/              presentation (slides.pdf, editable slides.pptx)
+docs/presentation.pdf  presentation (editable docs/presentation.pptx, with speaker notes)
 docs/recognition_design.md   dog recognition design (same as report section 6)
 data/  models/       large files, NOT committed (re-created by the scripts)
 ```
