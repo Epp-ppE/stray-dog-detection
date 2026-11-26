@@ -66,17 +66,20 @@ dt{font-weight:600} dd{margin:0}
 
 <h2><span class="n">1</span>The assignment</h2>
 <p>Stray dogs in Thai communities raise public-health (rabies), road-safety and welfare problems. Vaccination, sterilisation and community care all need basic facts: <b>how many dogs, where, when, and how they behave</b>. CMKL students placed cameras at community feeding spots in Chiang Mai. The footage is raw: <b>no labels, no annotations</b>. The task: design and build a complete pipeline that <b>detects dogs and locates them</b>, and turn the detections into useful information.</p>
-<h3>Deliverables and where they are</h3>
+<h3>What you hand in</h3>
 <table>
-  <tr><th>Deliverable</th><th>What it must contain</th><th>Where</th><th>Status</th></tr>
-  <tr><td>Source code</td><td>Environment setup, dependencies, instructions to reproduce every result</td><td><span class="mono">src/</span>, <span class="mono">README.md</span>, <span class="mono">requirements.txt</span>, <span class="mono">scripts/run_all.sh</span></td><td><span class="status done">done</span></td></tr>
-  <tr><td>Technical report</td><td>Pipeline and why; results with success <b>and</b> failure examples; limitations; evaluation method (metrics, validation, baselines)</td><td><span class="mono">report/report.pdf</span> (11 pages)</td><td><span class="status done">done</span></td></tr>
-  <tr><td>Dog recognition</td><td>Design for telling individual dogs apart (code optional)</td><td><span class="mono">docs/recognition_design.md</span>, section 7 here, demo in <span class="mono">src/reid_demo.py</span></td><td><span class="status done">done + demo</span></td></tr>
-  <tr><td>Presentation</td><td>Slides</td><td><span class="mono">slides/slides.pdf</span>, editable <span class="mono">slides/slides.pptx</span> with speaker notes</td><td><span class="status done">draft done</span></td></tr>
-  <tr><td>Extras</td><td>Line-by-line code explanation; this brief</td><td><span class="mono">docs/code_walkthrough.pdf</span>, <span class="mono">docs/project_brief.pdf</span></td><td><span class="status done">done</span></td></tr>
+  <tr><th>Submission</th><th>What it must contain</th><th>Where</th></tr>
+  <tr><td>Source code</td><td>Environment setup, dependencies, instructions to reproduce every result</td><td><span class="mono">README.md</span>, <span class="mono">requirements.txt</span>, <span class="mono">src/</span>, <span class="mono">scripts/</span></td></tr>
+  <tr><td>Technical report</td><td>Pipeline and why; results with success <b>and</b> failure examples; limitations; evaluation method (metrics, validation, baselines); <b>dog recognition design in section 6</b></td><td><span class="mono">report/report.pdf</span> (13 pages)</td></tr>
 </table>
+<p class="small">Extra material, not part of the submission, in the GitHub repository: presentation slides (<span class="mono">slides/slides.pdf</span>, editable <span class="mono">.pptx</span> with speaker notes), this brief, the line-by-line code walkthrough (<span class="mono">docs/code_walkthrough.pdf</span>), and the stand-alone recognition design (<span class="mono">docs/recognition_design.md</span>). All marked done; your name and student ID are on the report, README and title slide.</p>
 <div class="box warn">
-  <div class="kicker">Still for you to do</div>
+  <div class="kicker">Before presenting</div>
+  <ul>
+    <li>Rewrite the slide speaker notes in your own words, and restyle the slides if you like.</li>
+    <li>Practise the answers in section 9.</li>
+  </ul>
+</div>
   <ul>
     <li>Put your name on the report header and the title slide.</li>
     <li>Rewrite the slide speaker notes in your own words, and restyle the slides if you like.</li>
@@ -247,7 +250,7 @@ dt{font-weight:600} dd{margin:0}
 </ul>
 
 <h2 class="pb"><span class="n">7</span>Dog recognition: the full design</h2>
-<p>Detection says <i>"a dog is here"</i>. Recognition (re-identification, "re-ID") says <i>"this is dog #12, last seen yesterday at 08:05 at Camera3"</i>. That turns per-clip counts into a population estimate, per-dog visit histories and a list of dogs still to vaccinate or sterilise. The same design is in <span class="mono">docs/recognition_design.md</span>.</p>
+<p>Detection says <i>"a dog is here"</i>. Recognition (re-identification, "re-ID") says <i>"this is dog #12, last seen yesterday at 08:05 at Camera3"</i>. That turns per-clip counts into a population estimate, per-dog visit histories and a list of dogs still to vaccinate or sterilise. The same design is section 6 of the report.</p>
 <p class="mono" style="background:var(--soft);padding:7pt 9pt;line-height:1.6">clip → frames → detector → ByteTrack → confirmed tracks<br>→ best crops per track (sharp, large, not hidden)<br>→ embedding model → one vector per track<br>→ match against the gallery of known dogs (+ time and place)<br>→ same dog: add to its history  |  new dog: new gallery entry</p>
 <h3>7.1 Unit of recognition: the track</h3>
 <p>A track already groups several views of one dog inside a clip, so its crops can be averaged, which is more robust than one picture. The tracker handles identity <i>within</i> a clip; recognition only links tracks <i>across</i> clips.</p>
@@ -329,8 +332,8 @@ dt{font-weight:600} dd{margin:0}
 </dl>
 
 <h2><span class="n">10</span>Running it yourself</h2>
-<p class="mono" style="background:var(--soft);padding:7pt 9pt;line-height:1.7">git clone https://github.com/Epp-ppE/stray-dog-detection.git &amp;&amp; cd stray-dog-detection<br>python -m venv .venv &amp;&amp; . .venv/bin/activate<br>pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu<br>pip install -r requirements.txt<br>bash scripts/run_all.sh            # everything, about 4.5 h on CPU<br>cd src &amp;&amp; python evaluate.py      # just re-score from saved predictions (~10 min, no video needed)</p>
-<p class="small">Needs Python 3.10+ and ffmpeg. Labels, evaluation frame list, cached predictions, metrics, tracks and statistics are all committed under <span class="mono">outputs/</span>.</p>
+<p class="mono" style="background:var(--soft);padding:7pt 9pt;line-height:1.7">git clone https://github.com/Epp-ppE/stray-dog-detection.git &amp;&amp; cd stray-dog-detection<br>python -m venv .venv &amp;&amp; . .venv/bin/activate<br>pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu<br>pip install -r requirements.txt<br>bash scripts/run_all.sh            # everything, about 3 h on a 4-core CPU<br>cd src &amp;&amp; python evaluate.py      # just re-score from saved predictions (~10 min, no video needed)</p>
+<p class="small">Needs Python 3.12+ and ffmpeg (works on Windows, macOS and Linux; see the README). Labels, evaluation frame list, cached predictions, metrics, tracks and statistics are all committed under <span class="mono">outputs/</span>.</p>
 
 <h3>Words you may be asked about</h3>
 <dl>
