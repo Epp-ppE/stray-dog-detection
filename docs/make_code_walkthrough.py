@@ -37,7 +37,7 @@ FILES = [
  (5, 7, "Settings: which repository (can be overridden from outside), the release name, and the list of zip files."),
  (8, 9, "Creates the folders if missing and goes into the zips folder."),
  (10, 14, "For each zip: if it is already downloaded and not empty (<code>-s</code>), skip it. Otherwise try the GitHub command-line tool <code>gh</code>; if that is not available or fails, download with <code>curl</code>: <code>-f</code> fail on server errors, <code>-L</code> follow redirects, <code>--retry 3</code> try again up to 3 times."),
- (15, 16, "Back to the repository folder, then unzip each file into <code>data/raw</code>. <code>-q</code>: quiet. <code>-n</code>: never overwrite files that already exist."),
+ (15, 16, "Back to the repository folder, then unzip each file into <code>data/raw</code> with Python's built-in <code>zipfile</code> module, so the separate <code>unzip</code> tool is not needed (it is missing on Windows). <code>${PYTHON:-python}</code> uses the <code>PYTHON</code> variable if set, otherwise <code>python</code>."),
  (17, 17, "Prints how many files ended up in <code>data/raw</code>."),
 ]),
 ("src/clock_ocr.py", "Reads the date and time burned into the top-left of every frame. This was needed because Camera1's filenames are export times, not recording times. General text recognition (Tesseract) failed on bright backgrounds, so this file recognises each digit separately by its shape.", 106, [
@@ -97,7 +97,7 @@ FILES = [
  (80, 81, "Prints a summary: 447 files, 425 unique, 22 duplicates."),
  (84, 85, "Runs <code>main()</code> when the file is run directly."),
 ]),
-("src/detect.py", "Step 2. Runs the pretrained YOLO detector on 3 frames per second of every unique clip and saves every box it finds. This is the slow step: about 4.5 hours for the final YOLO11m at 960 px on this computer (47 minutes for YOLO11s at 640 px).", 82, [
+("src/detect.py", "Step 2. Runs the pretrained YOLO detector on 3 frames per second of every unique clip and saves every box it finds. This is the slow step: about 2.7 hours for the final YOLO11m at 960 px on a 4-core CPU (47 minutes for YOLO11s at 640 px).", 82, [
  (1, 10, "Docstring. Two key choices: boxes down to 0.01 confidence are kept, so the threshold can be tuned later without re-running the model, and other animals and people are kept, because puppies are often labelled 'cat' and night-time dogs 'sheep'."),
  (11, 15, "Imports, including <code>YOLO</code> from the ultralytics library and the frame sampler."),
  (17, 17, "COCO class numbers to keep: 0 person, 15 cat, 16 dog, 17 horse, 18 sheep, 19 cow, 21 bear. Everything else (cars, chairs, ...) is ignored."),
@@ -385,8 +385,8 @@ if __name__ == "__main__":
     out_html = ROOT / "docs" / "code_walkthrough.html"
     out_html.write_text(build())
     js = f"""const {{chromium}}=require('playwright');(async()=>{{const b=await chromium.launch();const p=await b.newPage();
-await p.goto('file://{out_html}',{{waitUntil:'networkidle'}});
-await p.pdf({{path:'{ROOT / "docs" / "code_walkthrough.pdf"}',format:'A4',printBackground:true,displayHeaderFooter:true,headerTemplate:'<span></span>',
+await p.goto('{out_html.as_uri()}',{{waitUntil:'networkidle'}});
+await p.pdf({{path:'{(ROOT / "docs" / "code_walkthrough.pdf").as_posix()}',format:'A4',printBackground:true,displayHeaderFooter:true,headerTemplate:'<span></span>',
 footerTemplate:'<div style="font-size:7pt;color:#777;width:100%;text-align:center;font-family:Inter">Code walkthrough · <span class=pageNumber></span>/<span class=totalPages></span></div>',
 margin:{{top:'14mm',bottom:'16mm',left:'13mm',right:'13mm'}}}});await b.close();}})()"""
     subprocess.run(["node", "-e", js], check=True)

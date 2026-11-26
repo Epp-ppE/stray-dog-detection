@@ -1,20 +1,23 @@
 # Stray dog detection in raw camera footage (Chiang Mai)
 
+**Phupa Denphatcharangkul** · Student ID 01223049 · CMKL course assignment
+
 A complete, CPU-only pipeline that **detects and locates dogs** in unlabelled, motion-triggered
 outdoor camera footage, links detections into **tracks**, and turns them into **visit and
 activity statistics** per camera. It includes a hand-labelled evaluation set, a comparison
-of 9 detector setups, a success and failure gallery, and a design (plus a small demo) for
+of 8 detector setups, a success and failure gallery, and a design (plus a small demo) for
 **recognising individual dogs** across clips.
 
 **Deliverables**
 
 | What | Where |
 |---|---|
-| Technical report | [`report/report.pdf`](report/report.pdf) (source: [`report/report.md`](report/report.md)) |
-| Presentation slides | [`slides/slides.pdf`](slides/slides.pdf), editable [`slides/slides.pptx`](slides/slides.pptx) |
-| Dog recognition design | [`docs/recognition_design.md`](docs/recognition_design.md) |
-| Code explained line by line | [`docs/code_walkthrough.pdf`](docs/code_walkthrough.pdf) |
-| Project brief (data findings) | [`docs/project_brief.pdf`](docs/project_brief.pdf) |
+| Technical report (includes the dog recognition design, section 6) | [`report/report.pdf`](report/report.pdf) |
+| Source code, setup and run instructions | this README, [`requirements.txt`](requirements.txt), [`src/`](src/), [`scripts/`](scripts/) |
+
+Extra material that is not part of the submission (presentation slides, report source, a
+line-by-line code walkthrough, a data brief) is in the GitHub repository:
+<https://github.com/Epp-ppE/stray-dog-detection>.
 
 ---
 
@@ -33,7 +36,7 @@ with 95% bootstrap intervals.
 
 The biggest single gain comes from counting every COCO animal class as "dog": the
 pretrained detector often calls puppies "cat", and calls dogs in night-time infrared
-"sheep", "cow" or "bear". At night this raises AP from 0.42 to 0.76. All 9 setups,
+"sheep", "cow" or "bear". At night this raises AP from 0.42 to 0.76. All 8 detector setups (plus 2 with tracking),
 breakdowns by camera and day/night, and the tracking results are in
 [`outputs/eval/metrics.json`](outputs/eval/metrics.json) and the report.
 
@@ -71,7 +74,7 @@ src/                 the pipeline (run in this order)
   prepare.py           step 1: manifest, duplicates, real start times
   detect.py            step 2: YOLO detection on every unique clip
   select_eval_frames.py   picks the 180 evaluation frames (fixed seed)
-  evaluate.py          step 5: scores 9 setups against the hand labels
+  evaluate.py          step 5: scores every setup against the hand labels
   tune_tracker.py      chooses ByteTrack settings on the dev clips
   track.py             step 3: ByteTrack tracking + confirmation rule
   stats.py             step 4: visits, dogs per visit, activity, charts
@@ -85,13 +88,16 @@ tools/
   label_tool.html      the browser page used for hand labelling
   import_labels.py     turns exported labels into outputs/eval/labels.json
 outputs/             small results, committed (manifest, tracks, stats, metrics, gallery)
-report/  slides/  docs/   the written deliverables
+report/report.pdf    the technical report
 data/  models/       large files, NOT committed (re-created by the scripts)
 ```
 
 ## Setup
 
-Python 3.10 or newer, `ffmpeg` on the PATH, about 10 GB of free disk. No GPU needed.
+Tested on Linux (4-core CPU, Python 3.12) for the full pipeline and on Windows 11 for the
+evaluation check. Python 3.12 or newer (the pinned numpy and pandas need it), `ffmpeg` on the PATH, about
+10 GB of free disk. No GPU needed. Checking the evaluation alone (`cd src; python
+evaluate.py`) needs neither the footage nor `ffmpeg`: it uses the saved predictions.
 
 ```bash
 git clone https://github.com/Epp-ppE/stray-dog-detection.git
@@ -111,7 +117,8 @@ bash scripts/run_all.sh
 ```
 
 This downloads the footage (2.4 GB) from the release `data-v1` and the model weights,
-then runs every step in order. The slow step is detection: about 4.5 hours for YOLO11m
+then runs every step in order. On Windows, run it in Git Bash (installed with Git for
+Windows) with `.venv` activated. The slow step is detection: about 2.7 hours for YOLO11m
 @960 on a 4-core CPU. For a quick end-to-end run, use the baseline detector (about 50 min):
 
 ```bash

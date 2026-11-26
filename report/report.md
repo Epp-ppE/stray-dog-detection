@@ -1,5 +1,7 @@
 # Detecting and locating stray dogs in raw camera footage from Chiang Mai
 
+**Phupa Denphatcharangkul** · Student ID 01223049
+
 *Technical report · CMKL course assignment · repository: `Epp-ppE/stray-dog-detection`*
 
 ## Summary
@@ -11,7 +13,7 @@ visit and activity statistics per camera. Before any modelling, two hidden probl
 data were found and fixed: 22 duplicate files, and wrong timestamps in Camera1's filenames,
 which were recovered from the clock burned into the video. Because no labels existed, 180
 frames were chosen at random and hand-labelled (332 dogs), split by clip into a **dev** half
-for tuning and a **test** half for reporting. Nine detector setups were compared. A
+for tuning and a **test** half for reporting. Eight detector setups were compared, plus two with tracking. A
 COCO-pretrained **YOLO11m at 960 px, counting every animal class as "dog"**, reached
 **AP@0.5 = 0.75 [95% CI 0.67–0.83]** and **F1 = 0.78** on the test half, against 0.44 and
 0.54 for the YOLO11s baseline. The largest single gain came from counting every animal
@@ -93,6 +95,7 @@ below 0.1. At the common default of 0.25, the final setup keeps 98% precision bu
 drops from 0.75 to 0.60.
 
 **Statistics definitions.**
+
 * *Dogs in a clip:* the most confirmed tracks visible in any one frame. This is a lower bound
   on distinct dogs that does not grow when the tracker loses and re-finds a dog.
 * *Dog-seconds:* the number of dogs in each frame, summed and divided by 3 frames per second.
@@ -109,6 +112,7 @@ was seen**, stratified by camera and day/night (Camera1 50 day + 20 night, Camer
 Camera4 50 day). At most 2–6 frames come from one clip, at least 3 s apart, because
 neighbouring frames are near-copies. The frames are pixel-identical to what the detector
 sees. They were labelled in a purpose-built browser tool with a written guide:
+
 * one box per dog, covering its visible extent only;
 * a **hard** flag for dogs less than about a quarter visible or too small or unclear to be sure;
 * fixed background objects (a rock that appears in every Camera1 frame) are not dogs.
@@ -297,26 +301,115 @@ What the numbers say, within the limits above:
 
 ## 6. Dog recognition
 
-The full design is in `docs/recognition_design.md`. In short:
+**Goal.** Decide whether a dog seen in one clip is the *same individual* as a dog seen in
+another clip, at another time or at another camera. Detection says "a dog is here".
+Recognition says "this is dog #12, last seen yesterday at 08:05 at Camera3". That is what
+turns per-clip counts into a population estimate, per-dog visit histories and a list of dogs
+still to vaccinate or sterilise. This section gives the design; section 6.8 tests the idea with a small demo (`src/reid_demo.py`).
 
-* **Unit of recognition: the track.** Several crops of one dog are averaged. The tracker
-  links within a clip; recognition links across clips.
-* **Free training signal.** Crops in one track are the same dog (positive pairs). Two tracks
-  in the same frame are different dogs (hard negative pairs). A person then joins tracks
-  into named dogs for a test set of 20–30 dogs.
-* **Model.** Start with a pretrained backbone. Fine-tune with a metric-learning loss
-  (triplet or ArcFace) on public animal re-identification data, then on local tracks. Use
-  part-based features for partly hidden dogs, and a separate, stricter night gallery
-  because colour disappears.
-* **Matching.** Cosine similarity, plus time and place: same camera within minutes means
-  probably the same dog, and two dogs in the same frame can't be one dog. An open-set
-  threshold decides "new dog", and a person confirms unsure links.
-* **Evaluation.** Rank-1/5 accuracy, re-ID mAP, pairwise precision and recall of links,
-  and error in the count of distinct dogs, split by day/night and same/other camera.
-* **Challenges.** Look-alike puppies, infrared, mostly top-down head-in-bowl views, fence
-  and plants, puppies growing, lens distortion and short clips.
+### 6.1 Where recognition sits in the pipeline
 
-### 6.1 Demo: grouping Camera3's tracks without training
+```
+clip -> frames (3 fps) -> detector -> ByteTrack -> confirmed tracks
+                                                     |
+                                     best crops per track (sharp, large, unoccluded)
+                                                     |
+                                     embedding model -> one vector per track
+                                                     |
+                     match against the gallery of known dogs (+ time/place prior)
+                                                     |
+                         same dog -> add to its history | new dog -> new gallery entry
+```
+
+The unit of recognition is a **track**, not a single frame. A track already groups several
+views of one dog within a clip, so it gives several crops to average, which is more robust
+than one picture. Within-clip identity is handled by the tracker. Recognition only has to
+link tracks *across* clips.
+
+### 6.2 Data collection
+
+| Step | What | Why |
+|---|---|---|
+| Free positives | Every confirmed track = several crops of one dog | Same-dog pairs with no labelling at all |
+| Free negatives | Two tracks visible **in the same frame** are different dogs | Hard negatives (same place, same light) with no labelling |
+| Human linking | A person groups tracks across clips into named dogs (dog-01, dog-02, ...), using a page like the box-labelling tool that shows track crops side by side | The only manual step; about 20-30 dogs give a usable test set |
+| Distinctive marks | For each named dog, note coat colour, patches, ear shape, collar or ear-notch (sterilised dogs in Thailand are often ear-notched) | Helps labellers stay consistent and gives attributes for search |
+| Keep collecting | Run the cameras over weeks, not 3 days; add a camera that sees dogs side-on at eye level | Most crops here are top-down while eating, with the head in the bowl |
+
+**Splits for evaluation:** by *dog* and by *day*. Test dogs must not appear in training,
+and the gallery and query images should come from different days, so the model can't win
+by matching the same lighting or the same moment.
+
+### 6.3 Features and models
+
+1. **Baseline (no training):** a general pretrained image model used as a feature
+   extractor. The demo uses the YOLO11 ImageNet classifier's pooled features. Other options are
+   DINOv2 or CLIP image features. They capture coat colour, patches and body shape.
+   Cosine similarity compares two tracks.
+2. **Fine-tuned re-identification model:** start from the same backbone, add an embedding
+   head and train with a metric-learning loss (triplet loss with hard-negative mining, or
+   ArcFace / sub-center ArcFace), as in person and animal re-ID. Train on public animal
+   re-ID data first (dog-face and pet re-ID datasets, plus wildlife re-ID collections), then
+   fine-tune on the locally linked tracks.
+3. **Part-aware features:** dogs here are often partly hidden by the fence, bowls or each
+   other. Pooling features from body parts (head, torso, legs) separately, or masking
+   hidden regions, keeps one visible patch from dominating.
+4. **Track-level aggregation:** embed the best 5-10 crops of each track (largest, sharpest,
+   detector-confident, not cut off at the edge) and average them. Hard cases can use the
+   minimum distance over crop pairs instead.
+5. **Separate day and night galleries:** infrared removes colour, so a brown dog and a
+   black dog can look identical. Night tracks are matched with shape-only features and a
+   higher threshold, or linked to day tracks only through time and place.
+
+### 6.4 Matching
+
+* **Similarity:** cosine similarity between track embeddings.
+* **Time and place prior:** two tracks on the same camera less than about 2 minutes apart
+  are very likely the same dog (a motion-triggered burst), so the similarity is raised.
+  Dogs can't be in two places at once, so overlapping tracks in the same frame are forced
+  to be different dogs.
+* **Open-set decision:** if the best match is below a threshold, the track is a **new
+  dog** and starts a new gallery entry. The threshold is chosen on held-out dogs to balance
+  false merges against false splits.
+* **Clustering view:** for population counting, all tracks are clustered (agglomerative,
+  average linkage) with the same-frame "cannot link" constraints, and the number of
+  clusters estimates the number of distinct dogs.
+* **Human in the loop:** low-confidence links are queued for a person to confirm. Each
+  confirmed link becomes new training data.
+
+### 6.5 Evaluation
+
+| Metric | Question |
+|---|---|
+| Rank-1 / Rank-5 accuracy | Is the correct dog the top (or a top-5) gallery match? |
+| mAP (re-ID) | How well does the system rank all images of the right dog? |
+| Pairwise precision / recall | Of the "same dog" links made, how many are right, and how many true links are found? |
+| Count error | Does the number of clusters match the number of distinct dogs? |
+| Per condition | Day vs night, same camera vs cross-camera, puppy vs adult |
+
+### 6.6 Challenges seen in this footage
+
+* **Look-alike dogs:** several black puppies at Camera1 and several white-and-tan puppies
+  at Camera3 differ only in small patches.
+* **Night infrared:** colour disappears and glare washes out texture.
+* **Viewpoint:** mostly top-down and from behind while eating, so faces (the most
+  distinctive part) are rarely visible.
+* **Occlusion:** chain-link fence over the whole Camera1 view, plants at Camera4, and dogs
+  overlapping each other at the bowl.
+* **Puppies grow:** appearance changes within weeks, so the gallery must be refreshed.
+* **Lens distortion:** wide-angle cameras stretch dogs near the edge.
+* **Low resolution for far dogs:** dogs on the road at Camera3 are only a few dozen pixels tall.
+* **Short clips (3-30 s):** some tracks have only a few usable crops.
+* **Collars and ownership:** a collar suggests an owned dog. Telling stray from owned needs
+  extra cues and local knowledge, and is beyond appearance alone.
+
+### 6.7 Privacy and ethics
+
+People appear in the footage (feeders, a person on a motorbike, a hand on the lens). The
+recognition system must only build galleries of **dogs**. Person detections should be used
+only to *discard* frames or blur people, never to identify them.
+
+### 6.8 Demo: grouping Camera3's tracks without training
 
 `src/reid_demo.py` tries the idea with no training and no identity labels:
 
