@@ -97,7 +97,7 @@ def slides():
                       "28% of found dogs were labelled something else, mostly 'cat'",
                       "At night: 52% (cat, sheep, horse)",
                       "Night AP: 0.42 → 0.76 with all animal classes counted"],
-             image="docs/img/puppy_as_cat.jpg", image_side=True,
+             image="slides/puppy_as_cat.jpg", image_side=True,
              notes="This black puppy is called 'cat' with 92% confidence. In infrared, dogs become sheep or horses. Merging the animal classes, and removing duplicate boxes on the same animal, recovers them."),
         dict(title="Where it works, where it fails",
              table=[["Subset", "AP@0.5", "Recall"],
