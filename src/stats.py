@@ -143,5 +143,5 @@ def main(tag):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--tracks", default="yolo11s_640")
+    ap.add_argument("--tracks", default="yolo11m_960_animals")
     main(ap.parse_args().tracks)
